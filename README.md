@@ -52,16 +52,16 @@ black src/watchful/api.py --config=pyproject.toml
 ```
 <br>
 
-### Build & Install Watchful Package
+### Build & Install Watchful Package Locally
 Build the package.
 ```
 python3 -m build .
 ```
 Install the built package. Add `--force-reinstall` to guarantee a (re)installation if you had installed Watchful previously.
 ```
-pip3 install dist/watchful-<the.release.version>-py3-none-any.whl [--force-reinstall]
+pip3 install dist/watchful-<latest.release.version>-py3-none-any.whl [--force-reinstall]
 ```
-`<the.release.version>` can be found [here](./src/watchful/VERSION).
+`<latest.release.version>` can be found [here](./src/watchful/VERSION).
 <br><br>
 Show the installed watchful package.
 ```
@@ -73,6 +73,13 @@ pip3 list | grep 'Package\|watchful'
 Interactively use or test package while in development mode.
 ```
 pip3 install -e . [--force-reinstall]
+```
+<br>
+
+### Install Watchful Package from PyPI (Optional)
+Install your desired release version. The releases can be found at https://pypi.org/project/watchful/.
+```
+pip3 install watchful[==your.desired.version] [--force-reinstall]
 ```
 <br>
 
