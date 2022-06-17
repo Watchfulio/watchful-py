@@ -1,0 +1,16 @@
+# MacOS
+.DS_Store
+
+# Python
+.ipynb_checkpoints/
+.pytest_cache/
+__pycache__/
+dist/
+*.egg-info/
+
+# Watchful
+watchful_ephemeral*
+
+# Others
+.vscode
+______*
