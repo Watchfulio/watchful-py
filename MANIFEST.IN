@@ -1,0 +1,4 @@
+include src/watchful/VERSION
+include README_PYPI.md
+include pylama.ini
+global-exclude ______*
