@@ -1,0 +1,9 @@
+[build-system]
+requires = ["setuptools>=42"]
+build-backend = "setuptools.build_meta"
+
+[tool.black]
+line-length = 120
+target-version = ['py310', 'py39', 'py38', 'py37']
+include = '\.py$'
+exclude = '\.ipynb$'  # exclude notebooks by default as they are mostly experimental, to explicitly include
