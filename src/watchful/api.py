@@ -1,9 +1,10 @@
-import os, subprocess, sys, time, io, socket
+import os, subprocess, sys, time, io, socket, urllib
 import http.client, json, csv
 
 """
 TODO:
  - we need a better way of signalling error besides making the caller check for it in the summary. Maybe throw from api() if error_msg is set?
+
 """
 
 def _refresh():
@@ -69,6 +70,7 @@ def _assert_success(summary):
         if "error_verb" in summary and summary["error_verb"]:
             verb_str = " ({})".format(summary["error_verb"])
         raise Exception("Summary error{}: {}".format(verb_str, summary["error_msg"]))
+    return summary
 
 def _read_response_summary(resp):
     assert(200 == int(resp.status))
@@ -86,6 +88,14 @@ def api(verb, **args):
     """Convenience method for API calls. See web/api.md for verbs and their arguments."""
     action = args # already a dictionary
     action["verb"] = verb
+    return api_send_action(action)
+
+def api_send_action(action):
+    """
+    Convenience method used by `se_auto_evaluator.py`. Consequently, api() should be refactored 
+    to reuse this function abstraction. Why? Where `action` is directly available, we should not 
+    strip it for api() and reform it in api(). 
+    """
     conn = _get_conn()
     conn.request("POST","/api",json.dumps(action),{"Content-Type":"application/json"})
     return _read_response_summary(conn.getresponse())
@@ -121,18 +131,41 @@ def create_project():
 def records(csv):
     return api("records", data=csv, content_type="text/csv")
 
+def class_(class_):
+    return api("class", name=class_)
+
 def create_class(class_, class_type="ftc"):
     return api("class", name=class_, class_type=class_type)
 
-def query_async(q):
-    return api("query", query=q)
+def query_async(q, page=0):
+    return api("query", query=q, page=page)
 
-def query(q):
-    query_async(q)
+def query(q, page=0):
+    query_async(q, page)
     return await_summary(
         lambda s: s["query_completed"],
         lambda s: s["query"] != q
     )
+
+def query_all(q, max_pages=0):
+    '''
+    Evaluates the query returning the results as opposed to the summary.
+    Will by default return all results for the query (all pages). This
+    can be limited by setting max_pages to the positive number of pages
+    you want.
+    Each query result is a vector with a string for each field that is
+    returned.
+    Note: TOKS, SENTS, CELLS queries only return one field and each
+          result will be wrapped in a vector of one string.
+    '''
+    page = 0
+    while True:
+        summary = query(q, page)
+        for fields in [cand["fields"] for cand in summary["candidates"]]:
+            yield fields
+        page += 1
+        if summary["query_end"] or max_pages and page == max_pages:
+            break
 
 def base_rate(class_, rate):
     return api("base_rate", label=class_, rate=rate)
@@ -160,7 +193,8 @@ def title(title):
     return api("title", title=title)
 
 def external_hinter(class_, name, weight):
-    return api("hinter", query="[external]", name=name, label=class_, weight=weight)
+    _assert_success(api("hinter", query="[external]", name=name, label=class_, weight=weight))
+    return await_plabels()
 
 # load attributes into local watchful using dataset_id:string and attributes_filename:string
 def load_attributes(dataset_id, attributes_filename):
@@ -192,14 +226,34 @@ def dump_dicts():
 # TODO: come up with a better streaming Python API here
 def hint(name, offset, values):
     values = list(map(lambda x: x and 1 or 0, values))
-    return api("hint", name=name, offset=offset, values=values)
+    return _assert_success(api("hint", name=name, offset=offset, values=values))
 
 def apply_hints(name):
-    return api("apply_hints", name=name)
+    _assert_success(api("apply_hints", name=name))
+    return await_plabels()
 
 def hint_all(name, values):
     hint(name, 0, values)
     return apply_hints(name)
+
+def export_stream(content_type="text/csv", mode="ftc"):
+    """
+    Begins the export using the export_stream call.  The result is not
+    JSON, but is data to be processed directly.
+
+    For FTC mode, content_type must be text/csv and mode must be ftc.
+
+    For NER mode, content_type must be application/jsonlines and mode
+    must be ner.
+
+    On success, returns the HTTPResponse object from which you can
+    read the data.
+    """
+    conn = _get_conn()
+    conn.request("GET", "/export_stream?content-type=" + urllib.parse.quote_plus(content_type) + "&mode=" + urllib.parse.quote_plus(mode))
+    resp = conn.getresponse()
+    assert(200 == int(resp.status))
+    return resp
 
 def export_async():
     return api("export", query="", content_type="text/csv")
