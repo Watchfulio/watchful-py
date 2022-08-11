@@ -1,10 +1,17 @@
+"""
+This script provides the functions required for interacting directly with
+Watchful client.
+"""
+################################################################################
+
+
 import os, subprocess, sys, time, io, socket, urllib
 import http.client, json, csv
 
 """
 TODO:
- - we need a better way of signalling error besides making the caller check for it in the summary. Maybe throw from api() if error_msg is set?
-
+- we need a better way of signalling error besides making the caller check for
+  it in the summary. Maybe throw from api() if error_msg is set?
 """
 
 def _refresh():
@@ -35,7 +42,9 @@ def await_port_opening(port, timeout_sec=10):
 
 def spawn_cmd(cmd, env=None):
     """Spawns a command and returns the PID of the spawned process"""
-    proc = subprocess.Popen(cmd + " &\n echo $!", shell=True, stdout=subprocess.PIPE, env=env)
+    proc = subprocess.Popen(
+        cmd + " &\n echo $!", shell=True, stdout=subprocess.PIPE, env=env
+    )
     out, _ = proc.communicate()
     pid = int(out.decode("utf-8")[:-1])
     return pid
@@ -44,8 +53,8 @@ def await_summary(pred, halt_fn=lambda x: False, unchanged_timeout=60):
     """
     Returns the summary once predicate(summary) returns true.
     Stops waiting once the halt function returns true, and returns None.
-
-    Raises an exception if the summary is unchanged for `unchanged_timeout` seconds.
+    Raises an exception if the summary is unchanged for `unchanged_timeout`
+    seconds.
     """
     prev_summary = None
     end = float('inf')
@@ -69,7 +78,9 @@ def _assert_success(summary):
         verb_str = ""
         if "error_verb" in summary and summary["error_verb"]:
             verb_str = " ({})".format(summary["error_verb"])
-        raise Exception("Summary error{}: {}".format(verb_str, summary["error_msg"]))
+        raise Exception(
+            "Summary error{}: {}".format(verb_str, summary["error_msg"])
+        )
     return summary
 
 def _read_response_summary(resp):
@@ -85,24 +96,32 @@ def _read_response_summary(resp):
 
 
 def api(verb, **args):
-    """Convenience method for API calls. See web/api.md for verbs and their arguments."""
+    """
+    Convenience method for API calls. See web/api.md for verbs and their
+    arguments.
+    """
     action = args # already a dictionary
     action["verb"] = verb
     return api_send_action(action)
 
 def api_send_action(action):
     """
-    Convenience method used by `se_auto_evaluator.py`. Consequently, api() should be refactored 
-    to reuse this function abstraction. Why? Where `action` is directly available, we should not 
-    strip it for api() and reform it in api(). 
+    Convenience method used by `se_auto_evaluator.py`. Consequently, api()
+    should be refactored to reuse this function abstraction. Why? Where `action`
+    is directly available, we should not strip it for api() and reform it in
+    api().
     """
     conn = _get_conn()
-    conn.request("POST","/api",json.dumps(action),{"Content-Type":"application/json"})
+    conn.request(
+        "POST","/api", json.dumps(action), {"Content-Type":"application/json"}
+    )
     return _read_response_summary(conn.getresponse())
 
 def ephemeral(port="9002"):
     """Start the backend for an interactive session without persistence."""
-    spawn_cmd("watchful -p " + port + " --no-persistence >watchful_ephemeral_output.txt 2>&1")
+    spawn_cmd(
+        f"watchful -p {port} --no-persistence >watchful_ephemeral_output.txt 2>&1"
+    )
     await_port_opening(int(port))
     external(port=port)
 
@@ -119,9 +138,13 @@ def list_projects():
 
 def open_project(id):
     c = _get_conn()
-    c.request("POST", "/projects", json.dumps(id), {"Content-Type":"application/json"})
+    c.request(
+        "POST", "/projects", json.dumps(id), {"Content-Type":"application/json"}
+    )
     r = c.getresponse()
-    return r.read()
+    ret = r.read()
+    await_plabels()
+    return ret
 
 def create_project():
     return open_project("new")
@@ -148,16 +171,14 @@ def query(q, page=0):
     )
 
 def query_all(q, max_pages=0):
-    '''
-    Evaluates the query returning the results as opposed to the summary.
-    Will by default return all results for the query (all pages). This
-    can be limited by setting max_pages to the positive number of pages
-    you want.
-    Each query result is a vector with a string for each field that is
-    returned.
-    Note: TOKS, SENTS, CELLS queries only return one field and each
-          result will be wrapped in a vector of one string.
-    '''
+    """
+    Evaluates the query returning the results as opposed to the summary. Will by
+    default return all results for the query (all pages). This can be limited by
+    setting max_pages to the positive number of pages you want.
+    Each query result is a vector with a string for each field that is returned.
+    Note: TOKS, SENTS, CELLS queries only return one field and each result will
+          be wrapped in a vector of one string.
+    """
     page = 0
     while True:
         summary = query(q, page)
@@ -193,10 +214,13 @@ def title(title):
     return api("title", title=title)
 
 def external_hinter(class_, name, weight):
-    _assert_success(api("hinter", query="[external]", name=name, label=class_, weight=weight))
+    _assert_success(api(
+        "hinter", query="[external]", name=name, label=class_, weight=weight
+    ))
     return await_plabels()
 
-# load attributes into local watchful using dataset_id:string and attributes_filename:string
+# load attributes into local watchful using dataset_id:string and
+# attributes_filename:string
 def load_attributes(dataset_id, attributes_filename):
     return api("attributes", id=dataset_id, file=attributes_filename)
 
@@ -250,7 +274,11 @@ def export_stream(content_type="text/csv", mode="ftc"):
     read the data.
     """
     conn = _get_conn()
-    conn.request("GET", "/export_stream?content-type=" + urllib.parse.quote_plus(content_type) + "&mode=" + urllib.parse.quote_plus(mode))
+    conn.request(
+        "GET",
+        "/export_stream?content-type=" + urllib.parse.quote_plus(content_type) \
+        + "&mode=" + urllib.parse.quote_plus(mode)
+    )
     resp = conn.getresponse()
     assert(200 == int(resp.status))
     return resp
@@ -273,12 +301,22 @@ def export_preview(mode="ftc"):
 def create_dataset(csv_bytes, columns, filename="none", has_header=True):
     # TODO: Add error handling
     from uuid import uuid4
-    id = str(uuid4())
+    id_ = str(uuid4())
     conn = _get_conn()
-    conn.request("POST","/api/_stream/" + id + "/0/true", csv_bytes, {"Content-Type":"text/csv"})
+    conn.request(
+        "POST",
+        "/api/_stream/" + id_ + "/0/true",
+        csv_bytes,
+        {"Content-Type":"text/csv"}
+    )
     _ = _read_response_summary(conn.getresponse())
     params = json.dumps({"filename":filename,"has_header":has_header})
-    conn.request("POST","/api/_stream/" + id, params, {"Content-Type":"application/json"})
+    conn.request(
+        "POST",
+        "/api/_stream/" + id_,
+        params,
+        {"Content-Type":"application/json"}
+    )
     dataset_id = _read_response_summary(conn.getresponse())["id"]
     api("dataset_add", id=dataset_id, columns=columns)
     return dataset_id
@@ -298,7 +336,8 @@ def label_single(row):
     rdr_list = list(rdr)
     if len(rdr_list) == 2:
         fields = get()['field_names']
-        assert fields == rdr_list[0][0:len(fields)], "server prepended the header to the labeled row"
+        assert fields == rdr_list[0][0:len(fields)], \
+            "server prepended the header to the labeled row"
     else:
         assert len(rdr_list) == 1, "server returned a single row"
     return rdr_list[-1]
@@ -312,16 +351,22 @@ def config_set(key, value):
 def print_candidates(summary=None):
     if summary is None:
         summary = get()
-    print("\n".join([",".join(summary['field_names'])] + list(map(lambda c: ",".join(c['fields']), summary["candidates"]))))
+    print(
+        "\n".join([",".join(summary['field_names'])] \
+        + list(map(lambda c: ",".join(c['fields']), summary["candidates"])))
+    )
 
 def candidate_dicts(summary=None):
     if summary is None:
         summary = get()
-    return list(map(lambda c: dict(zip(summary['field_names'], c['fields'])), summary['candidates']))
+    return list(map(
+        lambda c: dict(zip(summary['field_names'], c['fields'])),
+        summary['candidates']
+    ))
 
 def exit_backend():
-    # note the API call will usually fail because the backend exits before returning an HTTP response
-    # so we suppress the error
+    # note the API call will usually fail because the backend exits before
+    # returning an HTTP response so we suppress the error.
     try:
         api("exit")
     except:
@@ -330,7 +375,9 @@ def exit_backend():
 ### Hub API
 
 def hub_api(verb, token, **args):
-    """Convenience method for collaboration API calls."""
+    """
+    Convenience method for collaboration API calls.
+    """
     headers = {"Content-Type":"application/json"}
     headers.update({"Authorization": "Bearer " + token})
     action = args  # already a dictionary
