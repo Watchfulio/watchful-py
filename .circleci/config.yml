@@ -33,6 +33,26 @@ jobs:
           pkg-manager: pip
           # app-dir: ~/project/package-directory/  # If you're requirements.txt isn't in the root directory.
           pip-dependency-file: dev-requirements.txt  # if you have a different name for your requirements file, maybe one that combines your runtime and test requirements.
+      - restore_cache:
+          key: v1-watchful-py-pkg-{{ arch }}_{{checksum "src/watchful/VERSION" }}
+      - run:
+          name: Install Watchful Python Package
+          command: |
+            export ____VERSION=$( cat src/watchful/VERSION )
+            printenv
+            pip3 install watchful==${____VERSION}
+      - save_cache:
+          key: v1-watchful-py-pkg-{{ arch }}_{{checksum "src/watchful/VERSION" }}
+          paths:
+            - "~/.venv"
+            - "~/.pip"
+            - "~/.cache/pip"
+            - "~/.local/lib/python3.9"
+            - "~/.local/lib/python3.10"
+            - "~/.pyenv"
+            - "~/Library/Caches/pip"
+            - "/usr/local/lib/python3.9"
+            - "/usr/local/lib/python3.10"
       - run:
           name: Run tests
           # This assumes pytest is installed via the install-package step above
