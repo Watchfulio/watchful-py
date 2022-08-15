@@ -1,38 +1,46 @@
+################################################################################
+
 # Use the latest 2.1 version of CircleCI pipeline process engine.
 # See: https://circleci.com/docs/2.0/configuration-reference
 version: 2.1
 
-# Orbs are reusable packages of CircleCI configuration that you may share across projects, enabling you to create encapsulated, parameterized commands, jobs, and executors that can be used across multiple projects.
+
+# Orbs are reusable packages of CircleCI configuration that you may share across
+# projects, enabling you to create encapsulated, parameterized commands, jobs,
+# and executors that can be used across multiple projects.
 # See: https://circleci.com/docs/2.0/orb-intro/
 orbs:
-  # The python orb contains a set of prepackaged CircleCI configuration you can use repeatedly in your configuration files
-  # Orb commands and jobs help you with common scripting around a language/tool
-  # so you dont have to copy and paste it everywhere.
-  # See the orb documentation here: https://circleci.com/developer/orbs/orb/circleci/python
-  python: circleci/python@1.5.0
+  # The python orb contains a set of prepackaged CircleCI configuration you can
+  # use repeatedly in your configuration files. Orb commands and jobs help you
+  # with common scripting around a language/tool so you dont have to copy and
+  # paste it everywhere.
+  # See: https://circleci.com/developer/orbs/orb/circleci/python
+  python: circleci/python@2.0.3
+
 
 # Define a job to be invoked later in a workflow.
 # See: https://circleci.com/docs/2.0/configuration-reference/#jobs
 jobs:
-  build-and-test: # This is the name of the job, feel free to change it to better match what you're trying to do!
-    # These next lines defines a Docker executors: https://circleci.com/docs/2.0/executor-types/
-    # You can specify an image from Dockerhub or use one of the convenience images from CircleCI's Developer Hub
-    # A list of available CircleCI Docker convenience images are available here: https://circleci.com/developer/images/image/cimg/python
-    # The executor is the environment in which the steps below will be executed - below will use a python 3.10.2 container
-    # Change the version below to your required version of python
+  build-and-test:
+    # You can specify an executor using an image from Dockerhub or use one of
+    # the convenience images from CircleCI's Developer Hub.
+    # See: https://circleci.com/docs/2.0/executor-types/
+    # See: https://circleci.com/developer/images/image/cimg/python
     docker:
       - image: cimg/python:3.10.2
     # Checkout the code as the first step. This is a dedicated CircleCI step.
-    # The python orb's install-packages step will install the dependencies from a Pipfile via Pipenv by default.
-    # Here we're making sure we use just use the system-wide pip. By default it uses the project root's requirements.txt.
-    # Then run your tests!
-    # CircleCI will report the results back to your VCS provider.
+    # The python orb's install-packages step will install the dependencies from
+    # a Pipfile via Pipenv by default. Here we're making sure we use just use the
+    # system-wide pip.
     steps:
       - checkout
       - python/install-packages:
           pkg-manager: pip
-          # app-dir: ~/project/package-directory/  # If you're requirements.txt isn't in the root directory.
-          pip-dependency-file: dev-requirements.txt  # if you have a different name for your requirements file, maybe one that combines your runtime and test requirements.
+          # If your requirements.txt isn't in the root directory.
+          # app-dir: ~/project/package-directory/
+          # If you have a different name for your requirements file, maybe one
+          # that combines your runtime and test requirements.
+          pip-dependency-file: requirements_dev.txt
       - restore_cache:
           key: v1-watchful-py-pkg-{{ arch }}_{{checksum "src/watchful/VERSION" }}
       - run:
@@ -56,12 +64,15 @@ jobs:
       - run:
           name: Run tests
           # This assumes pytest is installed via the install-package step above
-          command: pytest
+          # command: pytest
+          command: |
+            pytest -W ignore::DeprecationWarning tests/test_*.py
 
-# Invoke jobs via workflows
+
+# Invoke jobs via workflows.
 # See: https://circleci.com/docs/2.0/configuration-reference/#workflows
 workflows:
-  "SDK Tests": # This is the name of the workflow, feel free to change it to better match your workflow.
+  "SDK Tests":
     # Inside the workflow, you define the jobs you want to run.
     jobs:
       - build-and-test
