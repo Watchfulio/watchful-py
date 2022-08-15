@@ -384,7 +384,7 @@ def hub_api(verb, token, **args):
     action["verb"] = verb
     conn = _get_conn()
     conn.request("POST","/remote",json.dumps(action),headers)
-    return _read_response_summary(conn.getresponse())
+    return _assert_success(_read_response_summary(conn.getresponse()))
 
 def login(credentials):
     return hub_api("login", credentials=credentials)

@@ -60,10 +60,6 @@ def set_multiprocessing(is_multiproc: bool) -> None:
     elif not is_multiproc:
         IS_MULTIPROC = False
         MULTIPROC_CHUNKSIZE = None
-    print(
-        f"Multiprocessing: {IS_MULTIPROC}, "
-        f"Multiprocessing chunksize: {MULTIPROC_CHUNKSIZE}"
-    )
 
 
 def set_multiproc_chunksize(multiproc_chunksize: int) -> None:
@@ -71,9 +67,12 @@ def set_multiproc_chunksize(multiproc_chunksize: int) -> None:
     if IS_MULTIPROC:
         global MULTIPROC_CHUNKSIZE
         MULTIPROC_CHUNKSIZE = multiproc_chunksize
+
+
+def print_multiproc_params() -> None:
     print(
         f"Multiprocessing: {IS_MULTIPROC}, "
-        f"Multiprocessing chunksize:{MULTIPROC_CHUNKSIZE}"
+        f"Multiprocessing chunksize: {MULTIPROC_CHUNKSIZE}"
     )
 
 

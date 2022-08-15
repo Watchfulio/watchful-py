@@ -30,7 +30,7 @@ except (ImportError, ModuleNotFoundError):
     from enricher import Enricher
 
 
-def enrich_dataset(custom_enricher_cls: Enricher) -> None:
+def enrich_dataset(custom_enricher_cls: Enricher, args=[]) -> None:
     """
     This is the function to use for performing custom data enrichment. Custom
     data enrichment variables and functions defined in custom_enricher_cls
@@ -39,7 +39,7 @@ def enrich_dataset(custom_enricher_cls: Enricher) -> None:
     set_multiprocessing(False)
     custom_enricher = custom_enricher_cls()
 
-    main([], custom_enricher)
+    main(args, custom_enricher)
 
 
 def main(args=None, custom_enricher=None):
