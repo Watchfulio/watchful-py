@@ -376,7 +376,8 @@ def exit_backend():
 
 def hub_api(verb, token, **args):
     """
-    Convenience method for collaboration API calls.
+    Convenience method for collaboration API calls.  Makes a hub
+    API request of the backend.
     """
     headers = {"Content-Type":"application/json"}
     headers.update({"Authorization": "Bearer " + token})
@@ -403,3 +404,6 @@ def push(token=None):
 
 def peek(token=None):
     return hub_api("peek", token)
+
+def whoami(token=None):
+    return hub_api("whoami", token)
