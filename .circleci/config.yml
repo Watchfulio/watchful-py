@@ -48,7 +48,7 @@ jobs:
           command: |
             pip3 install -r requirements_dev.txt
       - save_cache:
-          key: v1-sdk-build-deps--{{ arch }}_{{checksum "requirements_dev.txt" }}
+          key: v1-sdk-build-deps-{{ arch }}_{{checksum "requirements_dev.txt" }}
           paths:
             - "~/.venv"
             - "~/.pip"
@@ -59,6 +59,15 @@ jobs:
             - "~/Library/Caches/pip"
             - "/usr/local/lib/python3.9"
             - "/usr/local/lib/python3.10"
+      - run:
+          name: Build SDK
+          command: |
+            pip3 show watchful | grep 'Version' || true
+            export ____VERSION=$( cat src/watchful/VERSION )
+            printenv | grep ____VERSION
+            python3 -m build .
+            pip3 install dist/watchful-${____VERSION}-*.whl
+            pip3 show watchful | grep 'Version'
 
   install-and-test-sdk:
     docker:
@@ -66,20 +75,22 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          key: v1-sdk-{{ arch }}_{{checksum "src/watchful/VERSION" }}
+          key: v1-sdk-test-deps-{{ arch }}_{{checksum "src/watchful/VERSION" }}
       - run:
           name: Install SDK
           command: |
             export ____VERSION=$( cat src/watchful/VERSION )
-            printenv
+            printenv | grep ____VERSION
+            pip3 uninstall watchful==${____VERSION} -y || true
+            pip3 show watchful | grep 'Version' || true
             pip3 install watchful==${____VERSION}
-            pip3 show watchful | grep Version
+            pip3 show watchful | grep 'Version'
       - run:
           name: Install test deps
           command: |
             pip3 install -r requirements_test.txt
       - save_cache:
-          key: v1-sdk-{{ arch }}_{{checksum "src/watchful/VERSION" }}
+          key: v1-sdk-test-deps-{{ arch }}_{{checksum "src/watchful/VERSION" }}
           paths:
             - "~/.venv"
             - "~/.pip"
@@ -99,8 +110,12 @@ jobs:
 # Invoke jobs via workflows.
 # See: https://circleci.com/docs/2.0/configuration-reference/#workflows
 workflows:
-  "SDK Tests":
+  "SDK Workflow":
     # Inside the workflow, you define the jobs you want to run.
     jobs:
-      - build-sdk
-      - install-and-test-sdk
+      - build-sdk:
+          name: "Build SDK"
+      - install-and-test-sdk:
+          name: "Install and test SDK"
+          requires:
+            - "Build SDK"
