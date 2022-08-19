@@ -21,36 +21,65 @@ orbs:
 # Define a job to be invoked later in a workflow.
 # See: https://circleci.com/docs/2.0/configuration-reference/#jobs
 jobs:
-  build-and-test:
+  build-sdk:
     # You can specify an executor using an image from Dockerhub or use one of
     # the convenience images from CircleCI's Developer Hub.
     # See: https://circleci.com/docs/2.0/executor-types/
     # See: https://circleci.com/developer/images/image/cimg/python
     docker:
-      - image: cimg/python:3.10.2
+      - image: cimg/python:3.8.12
     # Checkout the code as the first step. This is a dedicated CircleCI step.
     # The python orb's install-packages step will install the dependencies from
     # a Pipfile via Pipenv by default. Here we're making sure we use just use the
     # system-wide pip.
     steps:
       - checkout
-      - python/install-packages:
-          pkg-manager: pip
-          # If your requirements.txt isn't in the root directory.
-          # app-dir: ~/project/package-directory/
-          # If you have a different name for your requirements file, maybe one
-          # that combines your runtime and test requirements.
-          pip-dependency-file: requirements_dev.txt
+      # - python/install-packages:
+      #     pkg-manager: pip
+      #     # If your requirements.txt isn't in the root directory.
+      #     # app-dir: ~/project/package-directory/
+      #     # If you have a different name for your requirements file, maybe one
+      #     # that combines your runtime and test requirements.
+      #     pip-dependency-file: requirements_dev.txt
       - restore_cache:
-          key: v1-watchful-py-pkg-{{ arch }}_{{checksum "src/watchful/VERSION" }}
+          key: v1-sdk-build-deps-{{ arch }}_{{checksum "requirements_dev.txt" }}
       - run:
-          name: Install Watchful Python Package
+          name: Install build deps
+          command: |
+            pip3 install -r requirements_dev.txt
+      - save_cache:
+          key: v1-sdk-build-deps--{{ arch }}_{{checksum "requirements_dev.txt" }}
+          paths:
+            - "~/.venv"
+            - "~/.pip"
+            - "~/.cache/pip"
+            - "~/.local/lib/python3.9"
+            - "~/.local/lib/python3.10"
+            - "~/.pyenv"
+            - "~/Library/Caches/pip"
+            - "/usr/local/lib/python3.9"
+            - "/usr/local/lib/python3.10"
+
+  install-and-test-sdk:
+    docker:
+      - image: cimg/python:3.8.12
+    steps:
+      - checkout
+      - restore_cache:
+          key: v1-sdk-{{ arch }}_{{checksum "src/watchful/VERSION" }}
+      - run:
+          name: Install SDK
           command: |
             export ____VERSION=$( cat src/watchful/VERSION )
             printenv
             pip3 install watchful==${____VERSION}
+            pip3 show watchful | grep Version
+      - run:
+          name: Install test deps
+          command: |
+            pip3 install -r requirements_test.txt
       - save_cache:
-          key: v1-watchful-py-pkg-{{ arch }}_{{checksum "src/watchful/VERSION" }}
+          key: v1-sdk-{{ arch }}_{{checksum "src/watchful/VERSION" }}
           paths:
             - "~/.venv"
             - "~/.pip"
@@ -62,9 +91,7 @@ jobs:
             - "/usr/local/lib/python3.9"
             - "/usr/local/lib/python3.10"
       - run:
-          name: Run tests
-          # This assumes pytest is installed via the install-package step above
-          # command: pytest
+          name: Run SDK tests
           command: |
             pytest -W ignore::DeprecationWarning tests/test_*.py
 
@@ -75,4 +102,5 @@ workflows:
   "SDK Tests":
     # Inside the workflow, you define the jobs you want to run.
     jobs:
-      - build-and-test
+      - build-sdk
+      - install-and-test-sdk
