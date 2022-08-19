@@ -18,16 +18,37 @@ orbs:
   python: circleci/python@2.0.3
 
 
+executors:
+  linux-python:
+    parameters:
+      tag:
+        type: string
+        # We intentionally let the job fail if there is no such executor so
+        # that we know the specified tag is unavailable.
+        # default: "3.8.12"
+    docker:
+      # Docker Python images
+      # https://circleci.com/developer/images/image/cimg/python#image-tags
+      - image: cimg/python:<< parameters.tag >>
+
+
 # Define a job to be invoked later in a workflow.
 # See: https://circleci.com/docs/2.0/configuration-reference/#jobs
 jobs:
   build-sdk:
+    description: "Build SDK"
+    parameters:
+      executor_tag:
+        description: "The Python environment that the executor uses"
+        type: string
     # You can specify an executor using an image from Dockerhub or use one of
     # the convenience images from CircleCI's Developer Hub.
     # See: https://circleci.com/docs/2.0/executor-types/
     # See: https://circleci.com/developer/images/image/cimg/python
-    docker:
-      - image: cimg/python:3.8.12
+    executor:
+      name: linux-python
+      tag: << parameters.executor_tag >>
+    working_directory: ~/repo/
     # Checkout the code as the first step. This is a dedicated CircleCI step.
     # The python orb's install-packages step will install the dependencies from
     # a Pipfile via Pipenv by default. Here we're making sure we use just use the
@@ -42,80 +63,259 @@ jobs:
       #     # that combines your runtime and test requirements.
       #     pip-dependency-file: requirements_dev.txt
       - restore_cache:
-          key: v1-sdk-build-deps-{{ arch }}_{{checksum "requirements_dev.txt" }}
+          key: v1-sdk-build-deps-{{ arch }}_{{ checksum "requirements_dev.txt" }}
       - run:
           name: Install build deps
           command: |
             pip3 install -r requirements_dev.txt
       - save_cache:
-          key: v1-sdk-build-deps-{{ arch }}_{{checksum "requirements_dev.txt" }}
+          key: v1-sdk-build-deps-{{ arch }}_{{ checksum "requirements_dev.txt" }}
           paths:
-            - "~/.venv"
-            - "~/.pip"
-            - "~/.cache/pip"
-            - "~/.local/lib/python3.9"
-            - "~/.local/lib/python3.10"
+            - "/usr/local/Cellar/pyenv"
             - "~/.pyenv"
+            - "~/.cache/pip"
             - "~/Library/Caches/pip"
             - "/usr/local/lib/python3.9"
             - "/usr/local/lib/python3.10"
+            # - "~/.pip"
+            # - "~/.venv"
+            # - "~/.local/lib/python3.9"
+            # - "~/.local/lib/python3.10"
+            # - "/usr/lib/python3.9"
+            # - "/usr/lib/python3.10"
+            # - "/Library/Frameworks/Python.framework"
+            # - "/System/Library/Frameworks/Python.framework"
       - run:
           name: Build SDK
           command: |
             pip3 show watchful | grep 'Version' || true
-            export ____VERSION=$( cat src/watchful/VERSION )
-            printenv | grep ____VERSION
+            export ____SDK_VERSION=$( cat src/watchful/VERSION )
+            printenv | grep ____SDK_VERSION
             python3 -m build .
-            pip3 install dist/watchful-${____VERSION}-*.whl
-            pip3 show watchful | grep 'Version'
+      - store_artifacts:
+          path: dist/
+      - persist_to_workspace:
+          root: ./
+          paths:
+            - dist/
 
   install-and-test-sdk:
-    docker:
-      - image: cimg/python:3.8.12
+    description: "Install & test SDK"
+    parameters:
+      executor_tag:
+        description: "The Python environment that the executor uses"
+        type: string
+      sdk_location:
+        description: "Location of SDK, e.g. pypi or repo"
+        type: enum
+        enum: [ "pypi", "repo" ]
+        default: "pypi"
+    # You can specify an executor using an image from Dockerhub or use one of
+    # the convenience images from CircleCI's Developer Hub.
+    # See: https://circleci.com/docs/2.0/executor-types/
+    # See: https://circleci.com/developer/images/image/cimg/python
+    executor:
+      name: linux-python
+      tag: << parameters.executor_tag >>
+    working_directory: ~/repo/
     steps:
       - checkout
-      - restore_cache:
-          key: v1-sdk-test-deps-{{ arch }}_{{checksum "src/watchful/VERSION" }}
+      - when:
+          condition:
+            equal: [ << parameters.sdk_location >>, "repo" ]
+          steps:
+            - attach_workspace:
+                at: ~/repo
+      - when:
+          condition:
+            equal: [ << parameters.sdk_location >>, "pypi" ]
+          steps:
+            - restore_cache:
+                key: v1-sdk-deps-{{ arch }}_{{ checksum "src/watchful/VERSION" }}
       - run:
           name: Install SDK
           command: |
-            export ____VERSION=$( cat src/watchful/VERSION )
-            printenv | grep ____VERSION
-            pip3 uninstall watchful==${____VERSION} -y || true
+            export ____SDK_VERSION=$( cat src/watchful/VERSION )
+            printenv | grep ____SDK_VERSION
+            pip3 uninstall watchful==${____SDK_VERSION} -y || true
             pip3 show watchful | grep 'Version' || true
-            pip3 install watchful==${____VERSION}
+            echo 'Installing SDK from << parameters.sdk_location >>...'
+            if [ << parameters.sdk_location >> = "pypi" ]; then
+              pip3 install watchful==${____SDK_VERSION}
+            elif [ << parameters.sdk_location >> = "repo" ]; then
+              pip3 install dist/watchful-${____SDK_VERSION}-*.whl
+            else
+              echo "Impossible path that won't be echoed anyway!"
+              exit 1
+            fi
             pip3 show watchful | grep 'Version'
+      - when:
+          condition:
+            equal: [ << parameters.sdk_location >>, "pypi" ]
+          steps:
+            - save_cache:
+                key: v1-sdk-deps-{{ arch }}_{{ checksum "src/watchful/VERSION" }}
+                paths:
+                  - "/usr/local/Cellar/pyenv"
+                  - "~/.pyenv"
+                  - "~/.cache/pip"
+                  - "~/Library/Caches/pip"
+                  - "/usr/local/lib/python3.9"
+                  - "/usr/local/lib/python3.10"
+                  # - "~/.pip"
+                  # - "~/.venv"
+                  # - "~/.local/lib/python3.9"
+                  # - "~/.local/lib/python3.10"
+                  # - "/usr/lib/python3.9"
+                  # - "/usr/lib/python3.10"
+                  # - "/Library/Frameworks/Python.framework"
+                  # - "/System/Library/Frameworks/Python.framework"
+      - restore_cache:
+          key: v1-sdk-test-deps-{{ arch }}_{{ checksum "src/watchful/VERSION" }}
       - run:
           name: Install test deps
           command: |
             pip3 install -r requirements_test.txt
       - save_cache:
-          key: v1-sdk-test-deps-{{ arch }}_{{checksum "src/watchful/VERSION" }}
+          key: v1-sdk-test-deps-{{ arch }}_{{ checksum "src/watchful/VERSION" }}
           paths:
-            - "~/.venv"
-            - "~/.pip"
-            - "~/.cache/pip"
-            - "~/.local/lib/python3.9"
-            - "~/.local/lib/python3.10"
+            - "/usr/local/Cellar/pyenv"
             - "~/.pyenv"
+            - "~/.cache/pip"
             - "~/Library/Caches/pip"
             - "/usr/local/lib/python3.9"
             - "/usr/local/lib/python3.10"
+            # - "~/.pip"
+            # - "~/.venv"
+            # - "~/.local/lib/python3.9"
+            # - "~/.local/lib/python3.10"
+            # - "/usr/lib/python3.9"
+            # - "/usr/lib/python3.10"
+            # - "/Library/Frameworks/Python.framework"
+            # - "/System/Library/Frameworks/Python.framework"
       - run:
           name: Run SDK tests
           command: |
             pytest -W ignore::DeprecationWarning tests/test_*.py
 
+  publish-sdk:
+    description: "Publish SDK"
+    parameters:
+      executor_tag:
+        description: "The Python environment that the executor uses"
+        type: string
+    executor:
+      name: linux-python
+      tag: << parameters.executor_tag >>
+    working_directory: ~/repo/
+    steps:
+      - checkout
+      - attach_workspace:
+          at: ~/repo
+      - restore_cache:
+          key: v1-sdk-build-deps-{{ arch }}_{{ checksum "requirements_dev.txt" }}
+      - run:
+          name: Install build deps
+          command: |
+            pip3 install -r requirements_dev.txt
+      - save_cache:
+          key: v1-sdk-build-deps-{{ arch }}_{{ checksum "requirements_dev.txt" }}
+          paths:
+            - "/usr/local/Cellar/pyenv"
+            - "~/.pyenv"
+            - "~/.cache/pip"
+            - "~/Library/Caches/pip"
+            - "/usr/local/lib/python3.9"
+            - "/usr/local/lib/python3.10"
+            # - "~/.pip"
+            # - "~/.venv"
+            # - "~/.local/lib/python3.9"
+            # - "~/.local/lib/python3.10"
+            # - "/usr/lib/python3.9"
+            # - "/usr/lib/python3.10"
+            # - "/Library/Frameworks/Python.framework"
+            # - "/System/Library/Frameworks/Python.framework"
+      - run:
+          name: Validate Tag & Publish SDK
+          command: |
+            export ____SDK_VERSION=$( cat src/watchful/VERSION )
+            printenv | grep ____SDK_VERSION
+            echo tag=<< pipeline.git.tag >>
+            echo version=$____SDK_VERSION
+            if [[ << pipeline.git.tag >> = "v"$____SDK_VERSION ]]; then
+              echo "Tag is a deploy tag, publishing sdk..."
+              python3 -m twine upload dist/* -u __token__ -p $PYPI_TOKEN --verbose
+            else
+              echo "Tag is not a deploy tag, sdk not published."
+            fi
+
 
 # Invoke jobs via workflows.
 # See: https://circleci.com/docs/2.0/configuration-reference/#workflows
+# There are 3 workflows here. To develop and contribute to the SDK, you would
+# be using the "Build" workflow. To test the SDK from PyPI, you would be
+# using the "Test Prod" workflow. The "Deploy" workflow publishes the SDK to
+# PyPI.
 workflows:
-  "SDK Workflow":
-    # Inside the workflow, you define the jobs you want to run.
+  # This is the workflow to develop, build and test the SDK.
+  "Build":
     jobs:
       - build-sdk:
           name: "Build SDK"
+          executor_tag: "3.8.12"
       - install-and-test-sdk:
-          name: "Install and test SDK"
+          name: "Install & test built SDK"
+          executor_tag: "3.8.12"
+          sdk_location: "repo"
           requires:
             - "Build SDK"
+  # # This is the worflow to test the SDK from PyPI.
+  # "Test Prod":
+  #   jobs:
+  #     - install-and-test-sdk:
+  #         name: "Install & test PyPI SDK"
+  #         executor_tag: "3.8.12"
+  #         sdk_location: "pypi"
+  # This is the workflow to build, publish and test the SDK from PyPI. This
+  # should usually be commented until a new SDK is ready to be published.
+  # After you published the SDK via your PR branch, comment out this workflow
+  # and commit before merging the PR, so that main does not publish the same
+  # SDK again.
+  "Deploy":
+    when:
+      and:
+        # - equal: [ << pipeline.git.branch >>, "main" ]
+        - << pipeline.git.tag >>
+    jobs:
+      - build-sdk:
+          name: "Build SDK"
+          executor_tag: "3.8.12"
+          filters:
+            tags:
+              only: /^v.*/
+      - install-and-test-sdk:
+          name: "Install & test built SDK"
+          executor_tag: "3.8.12"
+          sdk_location: "repo"
+          requires:
+            - "Build SDK"
+          filters:
+            tags:
+              only: /^v.*/
+      - publish-sdk:
+          name: "Publish SDK"
+          executor_tag: "3.8.12"
+          requires:
+            - "Install & test built SDK"
+          filters:
+            tags:
+              only: /^v.*/
+      - install-and-test-sdk:
+          name: "Install & test PyPI SDK"
+          executor_tag: "3.8.12"
+          sdk_location: "pypi"
+          requires:
+            - "Publish SDK"
+          filters:
+            tags:
+              only: /^v.*/
