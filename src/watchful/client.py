@@ -348,6 +348,11 @@ def config_set(key, value):
     conn.request("POST","/config", params, {"Content-Type":"application/json"})
     return _read_response_summary(conn.getresponse())
 
+def config():
+    conn = _get_conn()
+    conn.request("GET","/config", None, {"Content-Type":"application/json"})
+    return _read_response_summary(conn.getresponse())
+
 def print_candidates(summary=None):
     if summary is None:
         summary = get()
@@ -387,8 +392,13 @@ def hub_api(verb, token, **args):
     conn.request("POST","/remote",json.dumps(action),headers)
     return _assert_success(_read_response_summary(conn.getresponse()))
 
-def login(credentials):
-    return hub_api("login", credentials=credentials)
+def login(email, password):
+    import base64
+    headers = {"Content-Type":"application/json"}
+    headers.update({"Authorization": "Basic " + base64.b64encode(str.encode('{}:{}'.format(email, password))).decode('utf-8')})
+    conn = _get_conn()
+    conn.request("POST","/remote",json.dumps({"verb":"login"}),headers)
+    return _assert_success(_read_response_summary(conn.getresponse()))
 
 def publish(token=None):
     return hub_api("publish", token)
