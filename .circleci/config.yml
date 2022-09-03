@@ -81,6 +81,10 @@ jobs:
             - "/usr/local/lib/python3.9"
             - "/usr/local/lib/python3.10"
       - run:
+          name: Lint SDK
+          command: |
+            pylama tests/ src/watchful/ -o pylama.ini || true
+      - run:
           name: Build SDK
           command: |
             pip3 show watchful | grep 'Version' || true
