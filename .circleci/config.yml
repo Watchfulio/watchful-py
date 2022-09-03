@@ -86,6 +86,10 @@ jobs:
             # - "/Library/Frameworks/Python.framework"
             # - "/System/Library/Frameworks/Python.framework"
       - run:
+          name: Lint SDK
+          command: |
+            pylama tests/ src/watchful/ -o pylama.ini || true
+      - run:
           name: Build SDK
           command: |
             pip3 show watchful | grep 'Version' || true
