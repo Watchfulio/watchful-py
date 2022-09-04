@@ -35,8 +35,8 @@ executors:
 # Define a job to be invoked later in a workflow.
 # See: https://circleci.com/docs/2.0/configuration-reference/#jobs
 jobs:
-  build-sdk:
-    description: "Build SDK"
+  lint-and-build-sdk:
+    description: "Lint & Build SDK"
     parameters:
       executor_tag:
         description: "The Python environment that the executor uses"
@@ -92,7 +92,6 @@ jobs:
       - run:
           name: Build SDK
           command: |
-            pip3 show watchful | grep 'Version' || true
             export ____SDK_VERSION=$( cat src/watchful/VERSION )
             printenv | grep ____SDK_VERSION
             python3 -m build .
@@ -104,16 +103,21 @@ jobs:
             - dist/
 
   install-and-test-sdk:
-    description: "Install & test SDK"
+    description: "Install & Test SDK"
     parameters:
       executor_tag:
         description: "The Python environment that the executor uses"
         type: string
       sdk_location:
-        description: "Location of SDK, e.g. pypi or repo"
+        description: "Location to pull SDK from"
         type: enum
         enum: [ "pypi", "repo" ]
         default: "pypi"
+      profile:
+        description: "Profile to use for tests"
+        type: enum
+        enum: [ "dev", "prod", "deploy" ]
+        default: "dev"
     # You can specify an executor using an image from Dockerhub or use one of
     # the convenience images from CircleCI's Developer Hub.
     # See: https://circleci.com/docs/2.0/executor-types/
@@ -144,15 +148,21 @@ jobs:
             pip3 uninstall watchful==${____SDK_VERSION} -y || true
             pip3 show watchful | grep 'Version' || true
             echo 'Installing SDK from << parameters.sdk_location >>...'
-            if [ << parameters.sdk_location >> = "pypi" ]; then
-              pip3 install watchful==${____SDK_VERSION}
-            elif [ << parameters.sdk_location >> = "repo" ]; then
+            if [[ << parameters.profile >> = "dev" && << parameters.sdk_location >> = "repo" ]]; then
               pip3 install dist/watchful-${____SDK_VERSION}-*.whl
+            elif [[ << parameters.profile >> = "prod" && << parameters.sdk_location >> = "pypi" ]]; then
+              pip3 install watchful==${____SDK_VERSION} || true
+            elif [[ << parameters.profile >> = "deploy" && << parameters.sdk_location >> = "repo" ]]; then
+              pip3 install dist/watchful-${____SDK_VERSION}-*.whl
+            elif [[ << parameters.profile >> = "deploy" && << parameters.sdk_location >> = "pypi" ]]; then
+              echo "attempt 1..."; pip3 install watchful==${____SDK_VERSION}; sleep 3 \
+                || echo "attempt 2..."; pip3 install watchful==${____SDK_VERSION}; sleep 3 \
+                || echo "attempt 3..."; pip3 install watchful==${____SDK_VERSION}
             else
-              echo "Impossible path that won't be echoed anyway!"
+              echo 'Path for profile=<< parameters.profile >> sdk_location=<< parameters.sdk_location >> is not implemented!'
               exit 1
             fi
-            pip3 show watchful | grep 'Version'
+            pip3 show watchful | grep 'Version' || true
       - when:
           condition:
             equal: [ << parameters.sdk_location >>, "pypi" ]
@@ -175,13 +185,13 @@ jobs:
                   # - "/Library/Frameworks/Python.framework"
                   # - "/System/Library/Frameworks/Python.framework"
       - restore_cache:
-          key: v1-sdk-test-deps-{{ arch }}_{{ checksum "src/watchful/VERSION" }}
+          key: v1-sdk-test-deps-{{ arch }}_{{ checksum "requirements_test.txt" }}
       - run:
           name: Install test deps
           command: |
             pip3 install -r requirements_test.txt
       - save_cache:
-          key: v1-sdk-test-deps-{{ arch }}_{{ checksum "src/watchful/VERSION" }}
+          key: v1-sdk-test-deps-{{ arch }}_{{ checksum "requirements_test.txt" }}
           paths:
             - "/usr/local/Cellar/pyenv"
             - "~/.pyenv"
@@ -247,62 +257,57 @@ jobs:
             echo tag=<< pipeline.git.tag >>
             echo version=$____SDK_VERSION
             if [[ << pipeline.git.tag >> = "v"$____SDK_VERSION ]]; then
-              echo "Tag is a deploy tag, publishing sdk..."
+              echo "Tag specifies the same version in repo, publishing sdk..."
               python3 -m twine upload dist/* -u __token__ -p $PYPI_TOKEN --verbose
             else
-              echo "Tag is not a deploy tag, sdk not published."
+              echo "Tag does not specify the same version in repo, sdk not published."
             fi
 
 
 # Invoke jobs via workflows.
 # See: https://circleci.com/docs/2.0/configuration-reference/#workflows
-# There are 3 workflows here. To develop and contribute to the SDK, you would
-# be using the "Build" workflow. To test the SDK from PyPI, you would be
-# using the "Test Prod" workflow. The "Deploy" workflow publishes the SDK to
-# PyPI.
+# There are 3 workflows here. To develop and contribute to the SDK, you would be
+# monitoring the "Dev" workflow. To test the SDK from PyPI, you would be monitoring the
+# "Prod" workflow. Finally, The "Deploy" workflow publishes the SDK.
 workflows:
   # This is the workflow to develop, build and test the SDK.
-  "Build":
+  "Dev":
     jobs:
-      - build-sdk:
-          name: "Build SDK"
+      - lint-and-build-sdk:
+          name: "Lint & Build SDK (Dev)"
           executor_tag: "3.8.12"
       - install-and-test-sdk:
-          name: "Install & test built SDK"
+          name: "Install & Test Built SDK (Dev)"
           executor_tag: "3.8.12"
           sdk_location: "repo"
+          profile: "dev"
           requires:
-            - "Build SDK"
-  # # This is the worflow to test the SDK from PyPI.
-  # "Test Prod":
-  #   jobs:
-  #     - install-and-test-sdk:
-  #         name: "Install & test PyPI SDK"
-  #         executor_tag: "3.8.12"
-  #         sdk_location: "pypi"
-  # This is the workflow to build, publish and test the SDK from PyPI. This
-  # should usually be commented until a new SDK is ready to be published.
-  # After you published the SDK via your PR branch, comment out this workflow
-  # and commit before merging the PR, so that main does not publish the same
-  # SDK again.
-  "Deploy":
-    when:
-      and:
-        # - equal: [ << pipeline.git.branch >>, "main" ]
-        - << pipeline.git.tag >>
+            - "Lint & Build SDK (Dev)"
+  # This is the worflow to test the SDK from PyPI.
+  "Prod":
     jobs:
-      - build-sdk:
-          name: "Build SDK"
+      - install-and-test-sdk:
+          name: "Install & Test PyPI SDK (Prod)"
+          executor_tag: "3.8.12"
+          sdk_location: "pypi"
+          profile: "prod"
+  # This is the workflow to build, publish and test the SDK from PyPI.
+  "Deploy":
+    when: << pipeline.git.tag >>
+    jobs:
+      - lint-and-build-sdk:
+          name: "Lint & Build SDK (Deploy)"
           executor_tag: "3.8.12"
           filters:
             tags:
               only: /^v.*/
       - install-and-test-sdk:
-          name: "Install & test built SDK"
+          name: "Install & Test Built SDK (Deploy)"
           executor_tag: "3.8.12"
           sdk_location: "repo"
+          profile: "deploy"
           requires:
-            - "Build SDK"
+            - "Lint & Build SDK (Deploy)"
           filters:
             tags:
               only: /^v.*/
@@ -310,14 +315,15 @@ workflows:
           name: "Publish SDK"
           executor_tag: "3.8.12"
           requires:
-            - "Install & test built SDK"
+            - "Install & Test Built SDK (Deploy)"
           filters:
             tags:
               only: /^v.*/
       - install-and-test-sdk:
-          name: "Install & test PyPI SDK"
+          name: "Install & Test PyPI SDK (Deploy)"
           executor_tag: "3.8.12"
           sdk_location: "pypi"
+          profile: "deploy"
           requires:
             - "Publish SDK"
           filters:
