@@ -71,15 +71,20 @@ jobs:
       - save_cache:
           key: v1-sdk-build-deps-{{ arch }}_{{ checksum "requirements_dev.txt" }}
           paths:
-            - "~/.venv"
-            - "~/.pip"
-            - "~/.cache/pip"
-            - "~/.local/lib/python3.9"
-            - "~/.local/lib/python3.10"
+            - "/usr/local/Cellar/pyenv"
             - "~/.pyenv"
+            - "~/.cache/pip"
             - "~/Library/Caches/pip"
             - "/usr/local/lib/python3.9"
             - "/usr/local/lib/python3.10"
+            # - "~/.pip"
+            # - "~/.venv"
+            # - "~/.local/lib/python3.9"
+            # - "~/.local/lib/python3.10"
+            # - "/usr/lib/python3.9"
+            # - "/usr/lib/python3.10"
+            # - "/Library/Frameworks/Python.framework"
+            # - "/System/Library/Frameworks/Python.framework"
       - run:
           name: Lint SDK
           command: |
@@ -155,15 +160,20 @@ jobs:
             - save_cache:
                 key: v1-sdk-deps-{{ arch }}_{{ checksum "src/watchful/VERSION" }}
                 paths:
-                  - "~/.venv"
-                  - "~/.pip"
-                  - "~/.cache/pip"
-                  - "~/.local/lib/python3.9"
-                  - "~/.local/lib/python3.10"
+                  - "/usr/local/Cellar/pyenv"
                   - "~/.pyenv"
+                  - "~/.cache/pip"
                   - "~/Library/Caches/pip"
                   - "/usr/local/lib/python3.9"
                   - "/usr/local/lib/python3.10"
+                  # - "~/.pip"
+                  # - "~/.venv"
+                  # - "~/.local/lib/python3.9"
+                  # - "~/.local/lib/python3.10"
+                  # - "/usr/lib/python3.9"
+                  # - "/usr/lib/python3.10"
+                  # - "/Library/Frameworks/Python.framework"
+                  # - "/System/Library/Frameworks/Python.framework"
       - restore_cache:
           key: v1-sdk-test-deps-{{ arch }}_{{ checksum "src/watchful/VERSION" }}
       - run:
@@ -173,15 +183,20 @@ jobs:
       - save_cache:
           key: v1-sdk-test-deps-{{ arch }}_{{ checksum "src/watchful/VERSION" }}
           paths:
-            - "~/.venv"
-            - "~/.pip"
-            - "~/.cache/pip"
-            - "~/.local/lib/python3.9"
-            - "~/.local/lib/python3.10"
+            - "/usr/local/Cellar/pyenv"
             - "~/.pyenv"
+            - "~/.cache/pip"
             - "~/Library/Caches/pip"
             - "/usr/local/lib/python3.9"
             - "/usr/local/lib/python3.10"
+            # - "~/.pip"
+            # - "~/.venv"
+            # - "~/.local/lib/python3.9"
+            # - "~/.local/lib/python3.10"
+            # - "/usr/lib/python3.9"
+            # - "/usr/lib/python3.10"
+            # - "/Library/Frameworks/Python.framework"
+            # - "/System/Library/Frameworks/Python.framework"
       - run:
           name: Run SDK tests
           command: |
@@ -210,30 +225,44 @@ jobs:
       - save_cache:
           key: v1-sdk-build-deps-{{ arch }}_{{ checksum "requirements_dev.txt" }}
           paths:
-            - "~/.venv"
-            - "~/.pip"
-            - "~/.cache/pip"
-            - "~/.local/lib/python3.9"
-            - "~/.local/lib/python3.10"
+            - "/usr/local/Cellar/pyenv"
             - "~/.pyenv"
+            - "~/.cache/pip"
             - "~/Library/Caches/pip"
             - "/usr/local/lib/python3.9"
             - "/usr/local/lib/python3.10"
+            # - "~/.pip"
+            # - "~/.venv"
+            # - "~/.local/lib/python3.9"
+            # - "~/.local/lib/python3.10"
+            # - "/usr/lib/python3.9"
+            # - "/usr/lib/python3.10"
+            # - "/Library/Frameworks/Python.framework"
+            # - "/System/Library/Frameworks/Python.framework"
       - run:
-          name: Publish SDK
+          name: Validate Tag & Publish SDK
           command: |
-            python3 -m twine upload dist/* -u __token__ -p $PYPI_TOKEN --verbose
+            export ____SDK_VERSION=$( cat src/watchful/VERSION )
+            printenv | grep ____SDK_VERSION
+            echo tag=<< pipeline.git.tag >>
+            echo version=$____SDK_VERSION
+            if [[ << pipeline.git.tag >> = "v"$____SDK_VERSION ]]; then
+              echo "Tag is a deploy tag, publishing sdk..."
+              python3 -m twine upload dist/* -u __token__ -p $PYPI_TOKEN --verbose
+            else
+              echo "Tag is not a deploy tag, sdk not published."
+            fi
 
 
 # Invoke jobs via workflows.
 # See: https://circleci.com/docs/2.0/configuration-reference/#workflows
-# There are 3 workflows here. Any any point in time, you would use only one of
-# the workflows and comment out the other 2. To develop and contribute to the
-# SDK, you would be using the default workflow. To test the SDK from PyPI, you 
-# would be using the 2nd workflow. The last workflow publishes the SDK to PyPI.
+# There are 3 workflows here. To develop and contribute to the SDK, you would
+# be using the "Build" workflow. To test the SDK from PyPI, you would be
+# using the "Test Prod" workflow. The "Deploy" workflow publishes the SDK to
+# PyPI.
 workflows:
   # This is the workflow to develop, build and test the SDK.
-  "Dev & Build (Default)":
+  "Build":
     jobs:
       - build-sdk:
           name: "Build SDK"
@@ -244,37 +273,53 @@ workflows:
           sdk_location: "repo"
           requires:
             - "Build SDK"
-  # This is the worflow to test the SDK from PyPI.
-  "Test Prod":
-    jobs:
-      - install-and-test-sdk:
-          name: "Install & test PyPI SDK"
-          executor_tag: "3.8.12"
-          sdk_location: "pypi"
+  # # This is the worflow to test the SDK from PyPI.
+  # "Test Prod":
+  #   jobs:
+  #     - install-and-test-sdk:
+  #         name: "Install & test PyPI SDK"
+  #         executor_tag: "3.8.12"
+  #         sdk_location: "pypi"
   # This is the workflow to build, publish and test the SDK from PyPI. This
   # should usually be commented until a new SDK is ready to be published.
   # After you published the SDK via your PR branch, comment out this workflow
   # and commit before merging the PR, so that main does not publish the same
   # SDK again.
-  # "Full Workflow":
-  #   jobs:
-  #     - build-sdk:
-  #         name: "Build SDK"
-  #         executor_tag: "3.8.12"
-  #     - install-and-test-sdk:
-  #         name: "Install & test built SDK"
-  #         executor_tag: "3.8.12"
-  #         sdk_location: "repo"
-  #         requires:
-  #           - "Build SDK"
-  #     - publish-sdk:
-  #         name: "Publish SDK"
-  #         executor_tag: "3.8.12"
-  #         requires:
-  #           - "Install & test built SDK"
-  #     - install-and-test-sdk:
-  #         name: "Install & test PyPI SDK"
-  #         executor_tag: "3.8.12"
-  #         sdk_location: "pypi"
-  #         requires:
-  #           - "Publish SDK"
+  "Deploy":
+    when:
+      and:
+        # - equal: [ << pipeline.git.branch >>, "main" ]
+        - << pipeline.git.tag >>
+    jobs:
+      - build-sdk:
+          name: "Build SDK"
+          executor_tag: "3.8.12"
+          filters:
+            tags:
+              only: /^v.*/
+      - install-and-test-sdk:
+          name: "Install & test built SDK"
+          executor_tag: "3.8.12"
+          sdk_location: "repo"
+          requires:
+            - "Build SDK"
+          filters:
+            tags:
+              only: /^v.*/
+      - publish-sdk:
+          name: "Publish SDK"
+          executor_tag: "3.8.12"
+          requires:
+            - "Install & test built SDK"
+          filters:
+            tags:
+              only: /^v.*/
+      - install-and-test-sdk:
+          name: "Install & test PyPI SDK"
+          executor_tag: "3.8.12"
+          sdk_location: "pypi"
+          requires:
+            - "Publish SDK"
+          filters:
+            tags:
+              only: /^v.*/
