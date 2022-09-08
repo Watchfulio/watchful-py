@@ -4,24 +4,17 @@ This script provides the functions required for data enrichment.
 ################################################################################
 
 
-import argparse
 import csv
-import datetime
 import json
 import numbers
 import os
-import pathlib
 import pprint
-import psutil
 import re
-import shutil
+import sys
 from typing import Callable, Dict, List, Optional, Tuple, Union
 from multiprocessing import Pool
-
-try:
-    from watchful.client import get
-except (ImportError, ModuleNotFoundError):
-    from client import get
+import psutil
+from watchful import client
 
 pprint._sorted = lambda x: x
 pprint = pprint.PrettyPrinter(indent=4).pprint
@@ -32,22 +25,22 @@ IS_MULTIPROC = False
 MULTIPROC_CHUNKSIZE = None
 ENRICHMENT_ARGS = None
 ATTR_WRITER = None
-TYPE_ENRICHED_CELL = List[
+EnrichedCell = List[
     Tuple[Union[List[Tuple[int]], Dict[str, List[str]], Optional[str]]]
 ]
 
 # Constants for encoding spans into compact strings
-base = 64
-comp_len = 8
+BASE = 64
+COMP_LEN = 8
 
 # '0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmno'
 numerals = dict(map(
-    lambda ic: (ic[0], chr(ic[1])), enumerate(range(48, 48+base))
+    lambda ic: (ic[0], chr(ic[1])), enumerate(range(48, 48+BASE))
 ))
 
 # "#$%&'()*"
 compressed = dict(map(
-    lambda ic: (ic[0], chr(ic[1])), enumerate(range(35, 35+comp_len))
+    lambda ic: (ic[0], chr(ic[1])), enumerate(range(35, 35+COMP_LEN))
 ))
 
 
@@ -82,8 +75,8 @@ def base64(num):
 
     ret = ""
     while num > 0:
-        ret += numerals[num % base]
-        num = num // base
+        ret += numerals[num % BASE]
+        num = num // BASE
     return ret[::-1]
 
 
@@ -140,7 +133,7 @@ def base64str(coll):
                     ret.append(x)
 
     for x in coll:
-       buf = push_buf(buf, base64(x))
+        buf = push_buf(buf, base64(x))
     flush_buf()
     return ",".join(ret)
 
@@ -274,7 +267,7 @@ def spacy_atterize(doc):
     for (words, polarity, subjectivity, _) in \
         doc._.blob.sentiment_assessments.assessments:
         for word in words:
-            regex = re.compile("\\b{}\\b".format(re.escape(word)))
+            regex = re.compile(f"\\b{re.escape(word)}\\b")
             for m in regex.finditer(doc.text):
                 span = m.span()
                 if not span in assessments:
@@ -359,13 +352,15 @@ def spacy_atterize(doc):
     return cell
 
 
-def spacy_atterize_fn(cell, spacy_atterize, nlp):
+def spacy_atterize_fn(cell, spacy_atterize_, nlp):
     # Adding spacytextblob, cannot do it in load_spacy because of
     # our multiprocessing code. Adding a pipe to SpaCy is idempotent.
-    from spacytextblob.spacytextblob import SpacyTextBlob
+    from spacytextblob.spacytextblob import SpacyTextBlob \
+        # pylint: disable=unused-import
+
     if not nlp.has_pipe("spacytextblob"):
         nlp.add_pipe("spacytextblob")
-    return spacy_atterize(nlp(cell))
+    return spacy_atterize_(nlp(cell))
 
 
 def load_spacy():
@@ -396,17 +391,17 @@ def flair_atterize(sent):
     return enriched_cell
 
 
-def flair_atterize_fn(cell, flair_atterize, tagger_pred, sent_fn):
+def flair_atterize_fn(cell, flair_atterize_, tagger_pred, sent_fn):
     sent = sent_fn(cell)
     tagger_pred(sent)
-    return flair_atterize(sent)
+    return flair_atterize_(sent)
 
 
 def load_flair():
     from flair.data import Sentence
     from flair.models import SequenceTagger
-    import logging
-    import warnings
+    # import logging
+    # import warnings
 
     # logging.getLogger("flair").setLevel(logging.ERROR)
     # warnings.filterwarnings("ignore", module="huggingface_hub")
@@ -452,8 +447,8 @@ def adjust_span_offsets_from_char_to_byte(raw_cell, cell):
 
     for context in cell:
         spans = context[0]
-        for i in range(len(spans)):
-            (start, end) = spans[i]
+        for i, span in enumerate(spans):
+            (start, end) = span
             spans[i] = (byte_offsets[start], byte_offsets[end])
 
 
@@ -488,16 +483,21 @@ def enrich(
 
     Generally, you should not need to edit this function.
     """
+    sys_encoding = sys.getdefaultencoding()
 
-    in_reader = csv.reader(open(in_file, "r"))
-    n_cols = len(next(in_reader))
-    for n_rows, _ in enumerate(in_reader, 1):
-        pass
+    with open(in_file, "r", encoding=sys_encoding) as infile:
+        in_reader = csv.reader(infile)
+        n_cols = len(next(in_reader))
+        n_rows = None
+        for n_rows, _ in enumerate(in_reader, 1):
+            pass
 
-    in_reader = csv.reader(open(in_file, "r"))
-    next(in_reader)
+    with open(in_file, "r", encoding=sys_encoding) as infile, \
+        open(out_file, "w", encoding=sys_encoding) as outfile:
 
-    with open(out_file, "w") as outfile:
+        in_reader = csv.reader(infile)
+        next(in_reader)
+
         global ATTR_WRITER
         ATTR_WRITER = writer(outfile, n_rows, n_cols)
 
@@ -533,7 +533,7 @@ def enrich(
 
 
 def proc_enriched_row(
-    enriched_row: List[TYPE_ENRICHED_CELL],
+    enriched_row: List[EnrichedCell],
 ) -> None:
     """
     This function is iterated over every enriched row. Optionally, you may add
@@ -556,7 +556,7 @@ def proc_enriched_row(
 
 
 def proc_enriched_cell(
-    enriched_cell: TYPE_ENRICHED_CELL,
+    enriched_cell: EnrichedCell,
 ) -> None:
     """
     This function is iterated over every enriched cell. Optionally, you may add
@@ -579,7 +579,10 @@ def proc_enriched_cell(
 
 
 def get_vars_for_enrich_row_with_attribute_data(attr_names, attr_file):
-    attr_reader = csv.reader(open(attr_file, "r"))
+
+    f = open(attr_file, "r", encoding=sys.getdefaultencoding()) \
+        # pylint: disable=consider-using-with
+    attr_reader = csv.reader(f)
     attr_name_list_all = next(attr_reader)
 
     if not attr_names:
@@ -622,10 +625,14 @@ def enrich_row_with_attribute_data(row):
             # required by Watchful client interface. Watchful client has a
             # restriction of uppercase characters and maximum 6 characters on
             # attr_representn[2].
-            # attr_representn = (span, {attr_name: [attr_val]},
-            #     "EX{}".format(attr_name.replace("_", "").upper()))
-            # attr_representn = (span, {attr_name: [attr_val]},
-            #     "SOME_GENERAL_INFO_ABOUT_ALL_ATTRIBUTES")
+            # attr_representn = (
+            #     span, {attr_name: [attr_val]},
+            #     f"EX{attr_name.replace("_", "").upper()}"
+            # )
+            # attr_representn = (
+            #     span, {attr_name: [attr_val]},
+            #     "SOME_GENERAL_INFO_ABOUT_ALL_ATTRIBUTES"
+            # )
             attr_representn = (span, {attr_name: [attr_val]})
             cell_attrs.append(attr_representn)
 
@@ -650,8 +657,9 @@ def validate_attr_names(attr_names, attr_file):
     names match.
     """
 
-    attr_row_reader = csv.reader(open(attr_file, "r"))
-    attr_names_all = next(attr_row_reader)
+    with open(attr_file, "r", encoding=sys.getdefaultencoding()) as f:
+        attr_row_reader = csv.reader(f)
+        attr_names_all = next(attr_row_reader)
 
     for attr_name in attr_names.split(","):
         if attr_name not in attr_names_all:
@@ -704,63 +712,35 @@ def get_context(attribute_filename):
     `api.load_attributes(dataset_id, attribute_filename)`
     """
 
-    summary = get()
+    summary = client.get()
     attrs_dir = os.path.join(summary['watchful_home'], "datasets", "attrs")
     os.makedirs(attrs_dir, exist_ok=True)
-    _, in_file, _ = get_dataset_dir_file_id(summary)
+    _, _, in_file = get_dataset_id_dir_filepath(summary)
     in_filename = os.path.basename(in_file)
     out_file = os.path.join(
         attrs_dir,
-        "{}_{}.attrs".format(in_filename, attribute_filename)
+        f"{in_filename}_{attribute_filename}.attrs"
     )
     out_filename = os.path.basename(out_file)
     return in_file, out_file, out_filename
 
 
-def get_dataset_dir_file_id(summary, in_file=""):
+def get_dataset_id_dir_filepath(summary, in_file="", is_local=True):
     """
-    This function returns the directory, filepath and id of the dataset.
+    This function returns the id, directory and filepath of the currently opened
+    dataset.
     """
 
-    user_home_path = os.path.expanduser("~")
-    dataset_id = ""
-    if "error_msg" in summary and summary["error_msg"]:
-        print("Error getting dataset id")
-        exit(1)
-    else:
-        # `dataset_ids` should either be empty or contain one dataset id.
-        dataset_ids = summary["datasets"]
-        if len(dataset_ids) == 0:
-            print("No dataset is currently opened in Watchful.")
-            exit(1)
-        else:
-            dataset_id = dataset_ids[0]
+    summary = client._assert_success(summary)
+    dataset_id = client.get_dataset_id(summary)
+    datasets_dir = client.get_datasets_dir(summary, is_local)
 
-    if 'watchful_home' in summary:
-        watchful_home = summary['watchful_home']
-    else:
-        watchful_home = os.path.join(user_home_path, 'watchful')
-    datasets_dir = os.path.join(watchful_home, "datasets")
-
-    if in_file:
+    if in_file != "":
         # Check that `in_file` exists.
         if not os.path.isfile(in_file):
-            print("File <{}> does not exist.".format(args.in_file))
-            exit(1)
-
-        return datasets_dir, in_file, dataset_id
+            raise Exception(f"File {in_file} does not exist.")
+        dataset_filepath = in_file
     else:
-        dataset_ref_path = os.path.join(datasets_dir, "refs", dataset_id)
-        # Check that `dataset_ref_path` exists.
-        if not os.path.isfile(dataset_ref_path):
-            print("File <{}> does not exist.".format(dataset_ref_path))
-            exit(1)
+        dataset_filepath = client.get_dataset_filepath(summary, is_local)
 
-        dataset_ref = open(dataset_ref_path).readline()
-        dataset_file = os.path.join(datasets_dir, "raw", dataset_ref)
-        # Check that `dataset_file` exists.
-        if not os.path.isfile(dataset_file):
-            print("File <{}> does not exist.".format(dataset_file))
-            exit(1)
-
-        return datasets_dir, dataset_file, dataset_id
+    return dataset_id, datasets_dir, dataset_filepath

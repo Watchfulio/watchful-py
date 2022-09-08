@@ -1,6 +1,7 @@
 """
 This script is run on the Python command line or on the equivalent `main`
-function to execute data enrichment.
+function to execute data enrichment. If a custom enricher is used, then the
+`enrich_dataset` function is used.
 """
 ################################################################################
 
@@ -11,57 +12,52 @@ import os
 import pathlib
 import shutil
 import sys
-
-try:
-    from watchful.client import external, get, load_attributes
-    from watchful.attributes import set_multiprocessing, enrich, enrich_row, \
-        get_vars_for_enrich_row_with_attribute_data, \
-        enrich_row_with_attribute_data, load_spacy, spacy_atterize, \
-        spacy_atterize_fn, load_flair, flair_atterize, flair_atterize_fn, \
-        validate_attr_names, get_dataset_dir_file_id
-    from watchful.enricher import Enricher
-except (ImportError, ModuleNotFoundError):
-    from client import external, get, load_attributes
-    from attributes import set_multiprocessing, enrich, enrich_row, \
-        get_vars_for_enrich_row_with_attribute_data, \
-        enrich_row_with_attribute_data, load_spacy, spacy_atterize, \
-        spacy_atterize_fn, load_flair, flair_atterize, flair_atterize_fn, \
-        validate_attr_names, get_dataset_dir_file_id
-    from enricher import Enricher
+from typing import List, Type
+from uuid import uuid4
+from watchful import client, attributes
+from watchful.enricher import Enricher
 
 
-def enrich_dataset(custom_enricher_cls: Enricher, args=[]) -> None:
+def enrich_dataset(
+    custom_enricher_cls: Type[Enricher],
+    args: List[str]=None) -> None:
     """
     This is the function to use for performing custom data enrichment. Custom
     data enrichment variables and functions defined in custom_enricher_cls
     are used to perform the data enrichment.
     """
-    set_multiprocessing(False)
+    if args is None:
+        args = []
+    attributes.set_multiprocessing(False)
     custom_enricher = custom_enricher_cls()
 
     main(args, custom_enricher)
 
 
-def main(args=None, custom_enricher=None):
+def main(args: List[str]=None, custom_enricher: Enricher=None) -> None:
+    if args is None:
+        args = []
+
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
 
     # The dataset file; if not provided use the dataset currently opened in
-    # Watchful.
+    # Watchful. Not used in remote enrichment as we will retrieve the dataset
+    # from the remote Watchful application.
     parser.add_argument(
         "--in_file", type=str, default="",
         help="optional original csv dataset filepath, if not given use the \
             current dataset opened in watchfu."
     )
     # This is the attributes output file that is specifically formatted for
-    # integration to Watchful.
+    # integration with the Watchful application.
     parser.add_argument(
         "--out_file", type=str, default="",
         help="optional output attribute filepath; if given must end with \
             \".attrs\" extension."
     )
-    # Create SpaCy attributes if no custom attribute file is provided.
+    # The attribute file to ingest from, if it is available.
     parser.add_argument(
         "--attr_file", type=str, default="",
         help="optional input csv attribute filepath, if not given create the \
@@ -74,12 +70,19 @@ def main(args=None, custom_enricher=None):
         help="optional comma delimited string of attribute names to be used, \
             if not given use all attribute names."
     )
+    # The host to use; if not provided use localhost.
+    parser.add_argument(
+        "--wf_host", type=str, default="localhost",
+        help="optional string host running Watchful, if not given use \
+            \"localhost\"."
+    )
     # The port to use; if not provided use port 9001.
     parser.add_argument(
         "--wf_port", type=str, default="9001",
         help="optional string port number running Watchful, if not given use \
             \"9001\"."
     )
+    # The out-of-the-box NLP to use if no `attr_file` is provided.
     parser.add_argument(
         "--standard_nlp", type=str, default="spacy",
         help="Standard NLP to use, currently \"spacy\" and \"flair\" are \
@@ -93,44 +96,73 @@ def main(args=None, custom_enricher=None):
     args = parser.parse_args(args=args)
 
 
-    set_multiprocessing(args.multiprocessing)
+    attributes.set_multiprocessing(args.multiprocessing)
 
 
-    external(port=args.wf_port)
+    client.external(host=args.wf_host, port=args.wf_port)
 
 
-    datasets_dir, args.in_file, dataset_id = get_dataset_dir_file_id(
-        get(), args.in_file)
+    is_local = args.wf_host in ["localhost", "127.0.0.1"]
+
+
+    summary = client.get()
+    project_id = client.get_project_id(summary)
+    dataset_id, datasets_dir, args.in_file \
+        = attributes.get_dataset_id_dir_filepath(
+            summary,
+            args.in_file,
+            is_local
+        )
+
+
+    # `args.in_file` will still be returned as "" if Watchful application is
+    # remote. Therefore, we create a temporary filepath for `args.in_file` to
+    # download the original dataset to.
+    if not is_local:
+        if args.in_file == "":
+            user_home_path = os.path.expanduser("~")
+            working_dir = os.path.join(user_home_path, "watchful", "working")
+            os.makedirs(working_dir, exist_ok=True)
+            args.in_file = os.path.join(working_dir, str(uuid4()))
+            dataset_export_stream = client.export_dataset()
+            with open(args.in_file, "wb") as f:
+                for line in dataset_export_stream:
+                    f.write(line)
+        else:
+            print(
+                "in_file must be initially \"\" for enrichment to a remote " \
+                f"Watchful applcation; got \"{args.out_file}\" instead."
+            )
+            sys.exit(1)
 
 
     if args.out_file:
         # Check that `out_file` has ".attrs" extension.
         try:
-            is_zero = args.out_file[::-1].index(".attrs"[::-1]) == 0
-            if is_zero:
+            is_ext_attrs = os.path.splitext(args.out_file)[1] == ".attrs"
+            if is_ext_attrs:
                 del_out_file = False
                 # check that out_file's directory exists
                 out_file_dir = pathlib.Path(args.out_file).parent
                 if not os.path.isdir(out_file_dir):
-                    print("Directory <{}> does not exist.".format(out_file_dir))
+                    print(f"Directory {out_file_dir} does not exist.")
                     sys.exit(1)
             else:
-                print("out_file <{}> must end with \".attrs\" extension.".format(
-                    args.out_file))
+                print(
+                    f"out_file {args.out_file} must end with \".attrs\" " \
+                    "extension."
+                )
                 sys.exit(1)
-        except Exception as err_msg:
+        except OSError as err_msg:
             print(err_msg)
-            print("out_file <{}> must end with \".attrs\" extension.".format(
-                args.out_file))
+            print(
+                f"out_file {args.out_file} must end with \".attrs\" extension."
+            )
             sys.exit(1)
     else:
         del_out_file = True
         # Create a temporary `out_file` and mark it for deletion.
-        out_dirs_file = args.in_file.split(os.path.sep)
-        args.out_file = os.path.join(
-            os.path.sep.join(out_dirs_file[:-1]),
-            "{}.attrs".format(out_dirs_file[-1].split(".")[0])
-        )
+        args.out_file = f"{os.path.splitext(args.in_file)[0]}.attrs"
 
 
     # Enrich with attributes from a csv file, that is, already created from an
@@ -139,41 +171,48 @@ def main(args=None, custom_enricher=None):
 
         # Enrich with all attributes.
         if not args.attr_names:
-            print("Enriching <{}> using all attributes from <{}> ...".format(
-                args.in_file, args.attr_file))
-            enrich(
+            print(
+                f"Enriching {args.in_file} using all attributes from " \
+                f"{args.attr_file} ..."
+            )
+            attributes.enrich(
                 args.in_file,
                 args.out_file,
-                enrich_row_with_attribute_data,
-                get_vars_for_enrich_row_with_attribute_data(
+                attributes.enrich_row_with_attribute_data,
+                attributes.get_vars_for_enrich_row_with_attribute_data(
                     args.attr_names, args.attr_file
                 )
             )
             if not del_out_file:
-                print("Wrote attributes to <{}>.".format(args.out_file))
+                print(f"Wrote attributes to {args.out_file}.")
 
         # Enrich with specified attributes.
         else:
-            val_success = validate_attr_names(args.attr_names, args.attr_file)
+            val_success = attributes.validate_attr_names(
+                args.attr_names, args.attr_file
+            )
 
             if val_success:
-                print("Enriching <{}> using <{}> attributes from <{}> ..."
-                    .format(args.in_file, args.attr_names, args.attr_file))
-                enrich(
+                print(
+                    f"Enriching {args.in_file} using {args.attr_names} " \
+                    f"attributes from {args.attr_file} ..."
+                )
+                attributes.enrich(
                     args.in_file,
                     args.out_file,
-                    enrich_row_with_attribute_data,
-                    get_vars_for_enrich_row_with_attribute_data(
+                    attributes.enrich_row_with_attribute_data,
+                    attributes.get_vars_for_enrich_row_with_attribute_data(
                         args.attr_names, args.attr_file
                     )
                 )
                 if not del_out_file:
-                    print("Wrote attributes to <{}>.".format(args.out_file))
+                    print(f"Wrote attributes to {args.out_file}.")
             else:
                 print(
-                    "At least one of your attribute names in <{}> do not match "
-                    "those in the attribute input file <{}>.".format(
-                        args.attr_names, args.attr_file))
+                    f"At least one of your attribute names in " \
+                    f"{args.attr_names} do not match those in the attribute "
+                    f"input file {args.attr_file}."
+                )
                 sys.exit(1)
 
 
@@ -182,23 +221,29 @@ def main(args=None, custom_enricher=None):
 
         # Do SpaCy.
         if args.standard_nlp == "spacy":
-            nlp = load_spacy()
             # Want to know what pipes are used? Uncomment these:
+            #nlp = attributes.load_spacy()
             #import pprint
             #pprint.PrettyPrinter(indent=4).pprint(nlp.analyze_pipes())
 
             # `enrich_row` is the user custom function for enriching every row
-            # of the dataset. `spacy_atterize_fn`, `spacy_atterize` and `nlp`
-            # are the additional user variables to perform the data enrichment.
-            print("Using: ", args.standard_nlp, "...")
-            print("Enriching: ", args.in_file, "...")
-            enrich(
-                args.in_file, args.out_file,
-                enrich_row,
-                (spacy_atterize_fn, spacy_atterize, nlp)
+            # of the dataset. `spacy_atterize_fn`, `spacy_atterize` and
+            # `load_spacy()` are the additional user variables to perform the
+            # data enrichment.
+            print(f"Using {args.standard_nlp} ...")
+            print(f"Enriching {args.in_file} ...")
+            attributes.enrich(
+                args.in_file,
+                args.out_file,
+                attributes.enrich_row,
+                (
+                    attributes.spacy_atterize_fn,
+                    attributes.spacy_atterize,
+                    attributes.load_spacy()
+                )
             )
             if not del_out_file:
-                print("Wrote attributes to: ", args.out_file)
+                print(f"Wrote attributes to {args.out_file}.")
 
         # Do Flair.
         elif args.standard_nlp == "flair":
@@ -206,21 +251,25 @@ def main(args=None, custom_enricher=None):
             # of the dataset. `flair_atterize_fn`, `flair_atterize` and
             # `*load_flair()` are the additional user variables to perform the
             # data enrichment.
-            print("Using: ", args.standard_nlp, "...")
-            print("Enriching: ", args.in_file, "...")
-            enrich(
-                args.in_file, args.out_file,
-                enrich_row,
-                (flair_atterize_fn, flair_atterize, *load_flair())
+            print(f"Using {args.standard_nlp} ...")
+            print(f"Enriching {args.in_file} ...")
+            attributes.enrich(
+                args.in_file,
+                args.out_file,
+                attributes.enrich_row,
+                (
+                    attributes.flair_atterize_fn,
+                    attributes.flair_atterize,
+                    *attributes.load_flair()
+                )
             )
             if not del_out_file:
-                print("Wrote attributes to: ", args.out_file)
+                print(f"Wrote attributes to {args.out_file}.")
 
         else:
             print(
-                "No such standard NLP implemented:",
-                args.standard_nlp,
-                "\nNo enrichment performed."
+                f"The nlp {args.standard_nlp} is not implemented.\nNo " \
+                "enrichment done."
             )
             sys.exit(1)
 
@@ -229,19 +278,54 @@ def main(args=None, custom_enricher=None):
     else:
         # Perform custom data enrichment. Custom data enrichment variables and
         # functions in custom_enricher are used to perform the data enrichment.
-        print("Using your custom enricher...")
-        print("Enriching: ", args.in_file, "...")
-        enrich(
-            args.in_file, args.out_file,
+        print("Using your custom enricher ...")
+        print(f"Enriching {args.in_file} ...")
+        attributes.enrich(
+            args.in_file,
+            args.out_file,
             custom_enricher.enrich_row,
             custom_enricher.enrichment_args
         )
         if not del_out_file:
-            print("Wrote attributes to: ", args.out_file)
+            print(f"Wrote attributes to {args.out_file}.")
 
 
-    # Copy created attributes output file to watchful home attributes directory.
-    # Format the timestamp as "yyyy-mm-dd_hh-mm-ss-ssssss".
+    # If Watchful application is remote, delete the downloaded dataset as the
+    # data enrichment is completed.
+    if not is_local:
+        try:
+            os.remove(args.in_file)
+        except FileNotFoundError as err_msg:
+            print(err_msg)
+            print(
+                f"Error removing downloaded dataset file from {args.in_file}."
+            )
+            sys.exit(1)
+
+
+    # Check that the active project and the opened dataset have not changed.
+    summary = client.get()
+    current_project_id = client.get_project_id(summary)
+    if project_id != current_project_id:
+        print(
+            f"Current project {current_project_id} is different from the " \
+            f"enriched project {project_id}!"
+        )
+        sys.exit(1)
+    current_dataset_id, *_ = attributes.get_dataset_id_dir_filepath(
+        summary,
+        args.in_file,
+        is_local
+    )
+    if dataset_id != current_dataset_id:
+        print(
+            f"Current dataset {current_dataset_id} is different from the " \
+            f"enriched dataset {dataset_id}!"
+        )
+        sys.exit(1)
+
+
+    # Format the attributes file timestamp as "yyyy-mm-dd_hh-mm-ss-ssssss".
     # Use the full timestamp for completeness; though it's reasonable
     # "yyyy-mm-dd_hh-mm-ss" should work uniquely too.
     # This timestamp format is:
@@ -252,51 +336,68 @@ def main(args=None, custom_enricher=None):
     timestamp = str(
         datetime.datetime.now()
     ).replace(" ", "_").replace(":", "-").replace(".", "-")
-    dest_file = "__{}.".format(timestamp).join(
-        args.out_file.split(os.path.sep)[-1].split(".")
-    )
-    orig_dest_files = args.out_file, os.path.join(
-        datasets_dir, "attrs", dest_file
+    dest_attr_filename = f"__{timestamp}.".join(
+        os.path.basename(args.out_file).split(".")
     )
 
-    try:
-        os.makedirs(os.path.dirname(orig_dest_files[1]), exist_ok=True)
-        shutil.copyfile(*orig_dest_files)
-    except Exception as err_msg:
-        print(err_msg)
-        print("Error copying attribute output file from <{}> to <{}>.".format(
-            *orig_dest_files))
-        sys.exit(1)
+
+    # Copy created attributes output file to watchful home attributes directory
+    # if the watchful application is local.
+    if is_local:
+        dest_attr_filepath = os.path.join(
+            datasets_dir,
+            "attrs",
+            dest_attr_filename
+        )
+        try:
+            os.makedirs(os.path.dirname(dest_attr_filepath), exist_ok=True)
+            shutil.copyfile(args.out_file, dest_attr_filepath)
+        except OSError as err_msg:
+            print(err_msg)
+            print(
+                f"Error copying attribute output file from {args.out_file} " \
+                f"to {dest_attr_filepath}."
+            )
+            sys.exit(1)
+    # Upload created attributes output file to Watchful application if it is
+    # remote.
+    else:
+        client.upload_attributes(
+            dataset_id,
+            dest_attr_filename,
+            args.out_file,
+            project_id
+        )
 
     if del_out_file:
         try:
             os.remove(args.out_file)
-        except Exception as err_msg:
+        except FileNotFoundError as err_msg:
             print(err_msg)
-            print("Error removing temporary attribute output file from <{}>."
-                "".format(args.out_file))
+            print(
+                "Error removing temporary attribute output file from " \
+                f"{args.out_file}."
+            )
             sys.exit(1)
 
 
-    # Load attributes into Watchful.
-    """
-        Example usage:
-            curl -iX POST http://localhost:9001/api \
-              --header "Content-Type: application/json" \
-              --data '{"verb":"attributes","id":"9570b0b5-4a58-445f-9b51-b434caca2650","file":"attrs_file.attrs"}'
-        Arguments:
-            port: watchful client port
-            id: dataset id
-            file: attributes file
-    """
-    load_attrib_res = load_attributes(dataset_id, dest_file)
+    # Load attributes filepath into Watchful application.
+    # Example usage:
+        # curl -iX POST http://localhost:9001/api \
+        #   --header "Content-Type: application/json" \
+        #   --data '{"verb":"attributes","id":"9570b0b5-4a58-445f-9b51-b434caca2650",
+        #         "filepath":"/path/to/attributes_file.attrs"}'
+    # Arguments:
+    #     id: dataset id
+    #     filepath: attributes filepath
+    load_attrib_res = client.load_attributes(dataset_id, dest_attr_filename)
 
-    msg = "attributes via watchful client port <{}> to dataset id <{}>.".format(
-        args.wf_port, dataset_id)
+    msg = f"attributes via watchful {args.wf_host}:{args.wf_port} to dataset " \
+            f"id {dataset_id}."
     if "error_msg" in load_attrib_res and load_attrib_res["error_msg"]:
-        print("Error ingesting {}".format(msg))
+        print(f"Error ingesting {msg}")
     else:
-        print("Ingested {}".format(msg))
+        print(f"Ingested {msg}")
 
 
 if __name__ == "__main__":

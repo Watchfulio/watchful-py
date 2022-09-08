@@ -8,11 +8,7 @@ provided below for your reference.
 
 from abc import ABCMeta, abstractmethod
 from typing import Generic, Iterable, List, TypeVar
-
-try:
-    from watchful import attributes
-except (ImportError, ModuleNotFoundError):
-    import attributes
+from watchful import attributes
 
 
 class Enricher(metaclass=ABCMeta):
@@ -35,7 +31,7 @@ class Enricher(metaclass=ABCMeta):
     def enrich_row(
         self,
         row: Iterable[str],
-    ) -> List[attributes.TYPE_ENRICHED_CELL]:
+    ) -> List[attributes.EnrichedCell]:
         """
         In this function, we use our variables from `self.enrichment_args` to
         enrich every row of your data. The return value is our enriched row.
@@ -44,11 +40,11 @@ class Enricher(metaclass=ABCMeta):
 
     @classmethod
     def is_enricher(
-        cls, 
+        cls,
         possibly_an_enricher: Generic[TypeVar('T')]
     ) -> bool:
         """
-        Convenience method for checking if `possibly_an_enricher` is indeed of 
+        Convenience method for checking if `possibly_an_enricher` is indeed of
         type `Enricher`.
         """
         return issubclass(possibly_an_enricher, cls)
