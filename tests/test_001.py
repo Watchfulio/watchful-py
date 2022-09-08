@@ -17,9 +17,10 @@ def test_version() -> None:  # pylint: disable=unused-variable
         os.path.join(THIS_DIR_PATH, "..", "src", "watchful", "VERSION"),
         "r",
         encoding=sys.getdefaultencoding()) as f:
+        version = f.readline()
         assert watchful.__version__ \
             == importlib.metadata.version(_get_package_name()) \
-            == f.readline()
+            == version
 
 def test_connection() -> None:  # pylint: disable=unused-variable
     conn = client._get_conn()

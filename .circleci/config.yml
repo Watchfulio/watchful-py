@@ -139,10 +139,12 @@ jobs:
             equal: [ << parameters.sdk_location >>, "pypi" ]
           steps:
             - restore_cache:
-                key: v1-sdk-deps-{{ arch }}_{{ checksum "src/watchful/VERSION" }}
+                key: v1-sdk-deps-{{ arch }}__{{ checksum "src/watchful/VERSION" }}_{{ checksum "requirements_test.txt" }}
       - run:
-          name: Install SDK
+          name: Install SDK & Test Deps
           command: |
+            which pip3 && pip3 -V
+            which python3 && python3 -V
             export ____SDK_VERSION=$( cat src/watchful/VERSION )
             printenv | grep ____SDK_VERSION
             pip3 uninstall watchful==${____SDK_VERSION} -y || true
@@ -150,25 +152,29 @@ jobs:
             echo 'Installing SDK from << parameters.sdk_location >>...'
             if [[ << parameters.profile >> = "dev" && << parameters.sdk_location >> = "repo" ]]; then
               pip3 install dist/watchful-${____SDK_VERSION}-*.whl
+              pip3 show watchful | grep 'Version'
             elif [[ << parameters.profile >> = "prod" && << parameters.sdk_location >> = "pypi" ]]; then
               pip3 install watchful==${____SDK_VERSION} || true
+              pip3 show watchful | grep 'Version' || true
             elif [[ << parameters.profile >> = "deploy" && << parameters.sdk_location >> = "repo" ]]; then
               pip3 install dist/watchful-${____SDK_VERSION}-*.whl
+              pip3 show watchful | grep 'Version'
             elif [[ << parameters.profile >> = "deploy" && << parameters.sdk_location >> = "pypi" ]]; then
               echo "attempt 1..."; pip3 install watchful==${____SDK_VERSION}; sleep 3 \
                 || echo "attempt 2..."; pip3 install watchful==${____SDK_VERSION}; sleep 3 \
                 || echo "attempt 3..."; pip3 install watchful==${____SDK_VERSION}
+              pip3 show watchful | grep 'Version'
             else
               echo 'Path for profile=<< parameters.profile >> sdk_location=<< parameters.sdk_location >> is not implemented!'
               exit 1
             fi
-            pip3 show watchful | grep 'Version' || true
+            pip3 install -r requirements_test.txt
       - when:
           condition:
             equal: [ << parameters.sdk_location >>, "pypi" ]
           steps:
             - save_cache:
-                key: v1-sdk-deps-{{ arch }}_{{ checksum "src/watchful/VERSION" }}
+                key: v1-sdk-deps-{{ arch }}__{{ checksum "src/watchful/VERSION" }}_{{ checksum "requirements_test.txt" }}
                 paths:
                   - "/usr/local/Cellar/pyenv"
                   - "~/.pyenv"
@@ -184,33 +190,31 @@ jobs:
                   # - "/usr/lib/python3.10"
                   # - "/Library/Frameworks/Python.framework"
                   # - "/System/Library/Frameworks/Python.framework"
-      - restore_cache:
-          key: v1-sdk-test-deps-{{ arch }}_{{ checksum "requirements_test.txt" }}
-      - run:
-          name: Install test deps
-          command: |
-            pip3 install -r requirements_test.txt
-      - save_cache:
-          key: v1-sdk-test-deps-{{ arch }}_{{ checksum "requirements_test.txt" }}
-          paths:
-            - "/usr/local/Cellar/pyenv"
-            - "~/.pyenv"
-            - "~/.cache/pip"
-            - "~/Library/Caches/pip"
-            - "/usr/local/lib/python3.9"
-            - "/usr/local/lib/python3.10"
-            # - "~/.pip"
-            # - "~/.venv"
-            # - "~/.local/lib/python3.9"
-            # - "~/.local/lib/python3.10"
-            # - "/usr/lib/python3.9"
-            # - "/usr/lib/python3.10"
-            # - "/Library/Frameworks/Python.framework"
-            # - "/System/Library/Frameworks/Python.framework"
       - run:
           name: Run SDK tests
           command: |
-            pytest -W ignore::DeprecationWarning tests/test_*.py
+            which pip3 && pip3 -V
+            which python3 && python3 -V
+            if [[ << parameters.profile >> = "dev" && << parameters.sdk_location >> = "repo" ]]; then
+              pip3 show watchful | grep 'Version'
+              python3 tests/test_001.py
+              python3 -m pytest -W ignore::DeprecationWarning tests/test_*.py
+            elif [[ << parameters.profile >> = "prod" && << parameters.sdk_location >> = "pypi" ]]; then
+              pip3 show watchful | grep 'Version' || true
+              python3 tests/test_001.py || true
+              python3 -m pytest -W ignore::DeprecationWarning tests/test_*.py || true
+            elif [[ << parameters.profile >> = "deploy" && << parameters.sdk_location >> = "repo" ]]; then
+              pip3 show watchful | grep 'Version'
+              python3 tests/test_001.py
+              python3 -m pytest -W ignore::DeprecationWarning tests/test_*.py
+            elif [[ << parameters.profile >> = "deploy" && << parameters.sdk_location >> = "pypi" ]]; then
+              pip3 show watchful | grep 'Version'
+              python3 tests/test_001.py
+              python3 -m pytest -W ignore::DeprecationWarning tests/test_*.py
+            else
+              echo 'Path for profile=<< parameters.profile >> sdk_location=<< parameters.sdk_location >> is not implemented!'
+              exit 1
+            fi
 
   publish-sdk:
     description: "Publish SDK"
@@ -252,6 +256,8 @@ jobs:
       - run:
           name: Validate Tag & Publish SDK
           command: |
+            which pip3 && pip3 -V
+            which python3 && python3 -V
             export ____SDK_VERSION=$( cat src/watchful/VERSION )
             printenv | grep ____SDK_VERSION
             echo tag=<< pipeline.git.tag >>
@@ -283,7 +289,7 @@ workflows:
           profile: "dev"
           requires:
             - "Lint & Build SDK (Dev)"
-  # This is the worflow to test the SDK from PyPI.
+  # This is the workflow to test the SDK from PyPI.
   "Prod":
     jobs:
       - install-and-test-sdk:
