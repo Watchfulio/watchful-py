@@ -35,8 +35,8 @@ executors:
 # Define a job to be invoked later in a workflow.
 # See: https://circleci.com/docs/2.0/configuration-reference/#jobs
 jobs:
-  lint-and-build-sdk:
-    description: "Lint & Build SDK"
+  build-sdk:
+    description: "Build SDK"
     parameters:
       executor_tag:
         description: "The Python environment that the executor uses"
@@ -65,7 +65,7 @@ jobs:
       - restore_cache:
           key: v1-sdk-build-deps-{{ arch }}_{{ checksum "requirements_dev.txt" }}
       - run:
-          name: Install build deps
+          name: Install Build Deps
           command: |
             pip3 install -r requirements_dev.txt
       - save_cache:
@@ -86,10 +86,6 @@ jobs:
             # - "/Library/Frameworks/Python.framework"
             # - "/System/Library/Frameworks/Python.framework"
       - run:
-          name: Lint SDK
-          command: |
-            pylama tests/ src/watchful/ -o pylama.ini || true
-      - run:
           name: Build SDK
           command: |
             export ____SDK_VERSION=$( cat src/watchful/VERSION )
@@ -102,8 +98,8 @@ jobs:
           paths:
             - dist/
 
-  install-and-test-sdk:
-    description: "Install & Test SDK"
+  install-lint-and-test-sdk:
+    description: "Install, Lint & Test SDK"
     parameters:
       executor_tag:
         description: "The Python environment that the executor uses"
@@ -139,27 +135,39 @@ jobs:
             equal: [ << parameters.sdk_location >>, "pypi" ]
           steps:
             - restore_cache:
-                key: v1-sdk-deps-{{ arch }}__{{ checksum "src/watchful/VERSION" }}_{{ checksum "requirements_test.txt" }}
+                key: v1-sdk-deps-{{ arch }}__{{ checksum "src/watchful/VERSION" }}_{{ checksum "requirements_dev.txt" }}_{{ checksum "requirements_test.txt" }}
       - run:
-          name: Install SDK & Test Deps
+          name: Install SDK
           command: |
             which pip3 && pip3 -V
             which python3 && python3 -V
-            export ____SDK_VERSION=$( cat src/watchful/VERSION )
-            printenv | grep ____SDK_VERSION
-            pip3 uninstall watchful==${____SDK_VERSION} -y || true
-            pip3 show watchful | grep 'Version' || true
             echo 'Installing SDK from << parameters.sdk_location >>...'
             if [[ << parameters.profile >> = "dev" && << parameters.sdk_location >> = "repo" ]]; then
+              export ____SDK_VERSION=$( cat src/watchful/VERSION )
+              printenv | grep ____SDK_VERSION
+              pip3 uninstall watchful==${____SDK_VERSION} -y || true
+              pip3 show watchful | grep 'Version' || true
               pip3 install dist/watchful-${____SDK_VERSION}-*.whl
               pip3 show watchful | grep 'Version'
             elif [[ << parameters.profile >> = "prod" && << parameters.sdk_location >> = "pypi" ]]; then
-              pip3 install watchful==${____SDK_VERSION} || true
+              export ____SDK_VERSION_PROD_TEST=$( cat VERSION_PROD_TEST )
+              printenv | grep ____SDK_VERSION_PROD_TEST
+              pip3 uninstall watchful==${____SDK_VERSION_PROD_TEST} -y || true
               pip3 show watchful | grep 'Version' || true
+              pip3 install watchful==${____SDK_VERSION_PROD_TEST}
+              pip3 show watchful | grep 'Version'
             elif [[ << parameters.profile >> = "deploy" && << parameters.sdk_location >> = "repo" ]]; then
+              export ____SDK_VERSION=$( cat src/watchful/VERSION )
+              printenv | grep ____SDK_VERSION
+              pip3 uninstall watchful==${____SDK_VERSION} -y || true
+              pip3 show watchful | grep 'Version' || true
               pip3 install dist/watchful-${____SDK_VERSION}-*.whl
               pip3 show watchful | grep 'Version'
             elif [[ << parameters.profile >> = "deploy" && << parameters.sdk_location >> = "pypi" ]]; then
+              export ____SDK_VERSION=$( cat src/watchful/VERSION )
+              printenv | grep ____SDK_VERSION
+              pip3 uninstall watchful==${____SDK_VERSION} -y || true
+              pip3 show watchful | grep 'Version' || true
               echo "attempt 1..."; pip3 install watchful==${____SDK_VERSION}; sleep 3 \
                 || echo "attempt 2..."; pip3 install watchful==${____SDK_VERSION}; sleep 3 \
                 || echo "attempt 3..."; pip3 install watchful==${____SDK_VERSION}
@@ -168,13 +176,20 @@ jobs:
               echo 'Path for profile=<< parameters.profile >> sdk_location=<< parameters.sdk_location >> is not implemented!'
               exit 1
             fi
+      - run:
+          name: Install Build Deps
+          command: |
+            pip3 install -r requirements_dev.txt
+      - run:
+          name: Install Test Deps
+          command: |
             pip3 install -r requirements_test.txt
       - when:
           condition:
             equal: [ << parameters.sdk_location >>, "pypi" ]
           steps:
             - save_cache:
-                key: v1-sdk-deps-{{ arch }}__{{ checksum "src/watchful/VERSION" }}_{{ checksum "requirements_test.txt" }}
+                key: v1-sdk-deps-{{ arch }}__{{ checksum "src/watchful/VERSION" }}_{{ checksum "requirements_dev.txt" }}_{{ checksum "requirements_test.txt" }}
                 paths:
                   - "/usr/local/Cellar/pyenv"
                   - "~/.pyenv"
@@ -191,23 +206,18 @@ jobs:
                   # - "/Library/Frameworks/Python.framework"
                   # - "/System/Library/Frameworks/Python.framework"
       - run:
-          name: Run SDK tests
+          name: Lint SDK
+          command: |
+            pylama tests/ src/watchful/ -o pylama.ini
+      - run:
+          name: Run SDK Tests
           command: |
             which pip3 && pip3 -V
             which python3 && python3 -V
-            if [[ << parameters.profile >> = "dev" && << parameters.sdk_location >> = "repo" ]]; then
-              pip3 show watchful | grep 'Version'
-              python3 tests/test_001.py
-              python3 -m pytest -W ignore::DeprecationWarning tests/test_*.py
-            elif [[ << parameters.profile >> = "prod" && << parameters.sdk_location >> = "pypi" ]]; then
-              pip3 show watchful | grep 'Version' || true
-              python3 tests/test_001.py || true
-              python3 -m pytest -W ignore::DeprecationWarning tests/test_*.py || true
-            elif [[ << parameters.profile >> = "deploy" && << parameters.sdk_location >> = "repo" ]]; then
-              pip3 show watchful | grep 'Version'
-              python3 tests/test_001.py
-              python3 -m pytest -W ignore::DeprecationWarning tests/test_*.py
-            elif [[ << parameters.profile >> = "deploy" && << parameters.sdk_location >> = "pypi" ]]; then
+            if [[ << parameters.profile >> = "dev" && << parameters.sdk_location >> = "repo" \
+              || << parameters.profile >> = "prod" && << parameters.sdk_location >> = "pypi" \
+              || << parameters.profile >> = "deploy" && << parameters.sdk_location >> = "repo" \
+              || << parameters.profile >> = "deploy" && << parameters.sdk_location >> = "pypi" ]]; then
               pip3 show watchful | grep 'Version'
               python3 tests/test_001.py
               python3 -m pytest -W ignore::DeprecationWarning tests/test_*.py
@@ -279,21 +289,21 @@ workflows:
   # This is the workflow to develop, build and test the SDK.
   "Dev":
     jobs:
-      - lint-and-build-sdk:
-          name: "Lint & Build SDK (Dev)"
+      - build-sdk:
+          name: "Build SDK (Dev)"
           executor_tag: "3.8.12"
-      - install-and-test-sdk:
-          name: "Install & Test Built SDK (Dev)"
+      - install-lint-and-test-sdk:
+          name: "Install, Lint & Test Built SDK (Dev)"
           executor_tag: "3.8.12"
           sdk_location: "repo"
           profile: "dev"
           requires:
-            - "Lint & Build SDK (Dev)"
+            - "Build SDK (Dev)"
   # This is the workflow to test the SDK from PyPI.
   "Prod":
     jobs:
-      - install-and-test-sdk:
-          name: "Install & Test PyPI SDK (Prod)"
+      - install-lint-and-test-sdk:
+          name: "Install, Lint & Test PyPI SDK (Prod)"
           executor_tag: "3.8.12"
           sdk_location: "pypi"
           profile: "prod"
@@ -301,19 +311,19 @@ workflows:
   "Deploy":
     when: << pipeline.git.tag >>
     jobs:
-      - lint-and-build-sdk:
-          name: "Lint & Build SDK (Deploy)"
+      - build-sdk:
+          name: "Build SDK (Deploy)"
           executor_tag: "3.8.12"
           filters:
             tags:
               only: /^v.*/
-      - install-and-test-sdk:
-          name: "Install & Test Built SDK (Deploy)"
+      - install-lint-and-test-sdk:
+          name: "Install, Lint & Test Built SDK (Deploy)"
           executor_tag: "3.8.12"
           sdk_location: "repo"
           profile: "deploy"
           requires:
-            - "Lint & Build SDK (Deploy)"
+            - "Build SDK (Deploy)"
           filters:
             tags:
               only: /^v.*/
@@ -321,12 +331,12 @@ workflows:
           name: "Publish SDK"
           executor_tag: "3.8.12"
           requires:
-            - "Install & Test Built SDK (Deploy)"
+            - "Install, Lint & Test Built SDK (Deploy)"
           filters:
             tags:
               only: /^v.*/
-      - install-and-test-sdk:
-          name: "Install & Test PyPI SDK (Deploy)"
+      - install-lint-and-test-sdk:
+          name: "Install, Lint & Test PyPI SDK (Deploy)"
           executor_tag: "3.8.12"
           sdk_location: "pypi"
           profile: "deploy"
