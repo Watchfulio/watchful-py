@@ -136,11 +136,10 @@ jobs:
           steps:
             - restore_cache:
                 key: v1-sdk-deps-{{ arch }}__{{ checksum "src/watchful/VERSION" }}_{{ checksum "requirements_dev.txt" }}_{{ checksum "requirements_test.txt" }}
+      - show-python-environment
       - run:
           name: Install SDK
           command: |
-            which pip3 && pip3 -V
-            which python3 && python3 -V
             echo 'Installing SDK from << parameters.sdk_location >>...'
             if [[ << parameters.profile >> = "dev" && << parameters.sdk_location >> = "repo" ]]; then
               export ____SDK_VERSION=$( cat src/watchful/VERSION )
@@ -209,11 +208,10 @@ jobs:
           name: Lint SDK
           command: |
             pylama tests/ src/watchful/ -o pylama.ini
+      - show-python-environment
       - run:
           name: Run SDK Tests
           command: |
-            which pip3 && pip3 -V
-            which python3 && python3 -V
             if [[ << parameters.profile >> = "dev" && << parameters.sdk_location >> = "repo" \
               || << parameters.profile >> = "prod" && << parameters.sdk_location >> = "pypi" \
               || << parameters.profile >> = "deploy" && << parameters.sdk_location >> = "repo" \
@@ -263,11 +261,10 @@ jobs:
             # - "/usr/lib/python3.10"
             # - "/Library/Frameworks/Python.framework"
             # - "/System/Library/Frameworks/Python.framework"
+      - show-python-environment
       - run:
           name: Validate Tag & Publish SDK
           command: |
-            which pip3 && pip3 -V
-            which python3 && python3 -V
             export ____SDK_VERSION=$( cat src/watchful/VERSION )
             printenv | grep ____SDK_VERSION
             echo tag=<< pipeline.git.tag >>
@@ -278,6 +275,17 @@ jobs:
             else
               echo "Tag does not specify the same version in repo, sdk not published."
             fi
+
+
+commands:
+  show-python-environment:
+    description: "Show information on the Python environment"
+    steps:
+      - run:
+          name: "Show Python and PIP paths and versions"
+          command: |
+            which pip3 && pip3 -V
+            which python3 && python3 -V
 
 
 # Invoke jobs via workflows.
