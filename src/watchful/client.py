@@ -571,7 +571,8 @@ def exit_backend():
     """
     try:
         api("exit")
-    except NotImplementedError:
+    # We allowing passing this error as it is known.
+    except http.client.RemoteDisconnected:
         pass
 
 
