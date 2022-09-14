@@ -5,26 +5,15 @@
 This project serves to publish the Watchful Python Package, so that manual distribution can be discontinued and users can install it into their Python environment in their machines over the internet from PyPI. This also helps in the automation of Watchful Python features when used with the product. 
 
 The current features include the following and their corresponding user guides:
-- Watchful API
-  <br>https://github.com/Watchfulio/watchful/blob/main/py_api/api_intro.ipynb
-- Data Enrichment 
-  <br>https://github.com/Watchfulio/watchful/blob/main/py_api/readme.md
+- Watchful API and [notebook](https://github.com/Watchfulio/watchful-py/blob/main/examples/api_intro.ipynb)
+- [Data Enrichment](https://github.com/Watchfulio/watchful-py/blob/main/examples/README_enrich.md) and [notebook](https://github.com/Watchfulio/watchful-py/blob/main/examples/enrichment_intro.ipynb)
 <br><br>
 
 ## Steps
 
 ### Create Python Enviroment
-Refer to https://github.com/Watchfulio/watchful/tree/main/backend/active_learning#running-standalone-active-learning-tools
-for detailed options. 
-
-Assuming you chose _Conda_, follow these steps to set up the environment:
-```
-conda create --name=watchful_py python=3.8.12
-```
-```
-conda activate watchful_py
-```
-<br>
+Refer [here](https://github.com/Watchfulio/watchful-py/blob/main/README_PY_ENV.md) for options.
+<br><br>
 
 ### Upgrade Tools
 Upgrade pip, build and test tools.
@@ -77,7 +66,7 @@ pip3 install -e . [--force-reinstall]
 <br>
 
 ### Install Watchful Package from PyPI (Optional)
-Install your desired release version. The releases can be found at https://pypi.org/project/watchful/.
+Install your desired release version. The releases can be found at [PyPI](https://pypi.org/project/watchful/).
 ```
 pip3 install watchful[==your.desired.version] [--force-reinstall]
 ```
