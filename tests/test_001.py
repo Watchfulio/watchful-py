@@ -6,7 +6,7 @@ Basic tests for Watchful SDK.
 import argparse
 import os
 import sys
-import importlib.metadata
+# import importlib.metadata
 import watchful
 from watchful import client
 
@@ -21,13 +21,16 @@ def test_version(test_env: str) -> None:  # pylint: disable=unused-variable
             )
         with open(filename, "r", encoding=sys.getdefaultencoding()) as f:
             version = f.readline()
-            assert watchful.__version__ \
-                == importlib.metadata.version(_get_package_name()) \
-                == version, f"versions are {watchful.__version__}, " \
-                    f"{importlib.metadata.version(_get_package_name())} and " \
-                    f"{version}."
+            # assert watchful.__version__ \
+            #     == importlib.metadata.version(_get_package_name()) \
+            #     == version, f"versions are {watchful.__version__}, " \
+            #         f"{importlib.metadata.version(_get_package_name())} and " \
+            #         f"{version}."
+            assert watchful.__version__ == version, \
+                f"versions are {watchful.__version__} and {version}."
     else:
         assert False, f"No such environment: {test_env}"
+
 
 def test_connection() -> None:  # pylint: disable=unused-variable
     conn = client._get_conn()
@@ -35,15 +38,17 @@ def test_connection() -> None:  # pylint: disable=unused-variable
         and conn.host == str(client.HOST) \
         and conn.port == int(client.PORT)
 
-def _get_package_name() -> str:  # pylint: disable=unused-variable
-    with open(
-        os.path.join(THIS_DIR_PATH, "..", "setup.cfg"),
-        "r",
-        encoding=sys.getdefaultencoding()) as f:
-        while line := f.readline():
-            if "name" in line:
-                return line.split("=")[1].strip()
-        return ""
+# def _get_package_name() -> str:  # pylint: disable=unused-variable
+#     with open(
+#         os.path.join(THIS_DIR_PATH, "..", "setup.cfg"),
+#         "r",
+#         encoding=sys.getdefaultencoding()) as f:
+#         line = f.readline()
+#         while line:
+#             if "name" in line:
+#                 return line.split("=")[1].strip()
+#             line = f.readline()
+#         return ""
 
 
 if __name__ == "__main__":
