@@ -217,8 +217,8 @@ jobs:
               || << parameters.profile >> = "deploy" && << parameters.sdk_location >> = "repo" \
               || << parameters.profile >> = "deploy" && << parameters.sdk_location >> = "pypi" ]]; then
               pip3 show watchful | grep 'Version'
-              python3 tests/test_001.py
-              python3 -m pytest -W ignore::DeprecationWarning tests/test_*.py
+              python3 tests/test_001.py --test_env << parameters.profile >>
+              python3 -m pytest -W ignore::DeprecationWarning tests/test_*.py --test_env << parameters.profile >>
             else
               echo 'Path for profile=<< parameters.profile >> sdk_location=<< parameters.sdk_location >> is not implemented!'
               exit 1
