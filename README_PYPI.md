@@ -11,18 +11,13 @@ The current Watchful features include the following:
 
 ### Create Python Enviroment
 Create a Python virtual environment and activate it. The following are a few ways to do it:
-- https://docs.python.org/3/library/venv.html
-- https://virtualenv.pypa.io/en/latest/
-- https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html
+- [`pyenv`](https://github.com/pyenv/pyenv)
+- [`conda`](https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html)
+- [`venv`](https://docs.python.org/3/library/venv.html)
+- [`virtualenv`](https://virtualenv.pypa.io/en/latest/)
 
-Assuming you chose _Conda_, follow these steps to set up the environment:
-```
-conda create --name=watchful_py python=3.8.12
-```
-```
-conda activate watchful_py
-```
-<br>
+Refer to `README_PY_ENV.md` in the package directory for more steps on creating Python environments.
+<br><br>
 
 ### Install Watchful Package
 Install the built package. Add `--force-reinstall` to guarantee a (re)installation if you had installed Watchful previously.
