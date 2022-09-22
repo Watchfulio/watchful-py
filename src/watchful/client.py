@@ -27,8 +27,9 @@ PORT = "9002"
 
 
 def _refresh():
-    del sys.modules['watchful']
+    del sys.modules["watchful"]
     import watchful
+
     print(f"watchful version: {watchful.__version__}")
 
 
@@ -71,7 +72,7 @@ def await_summary(pred, halt_fn=lambda x: False, unchanged_timeout=60):
     seconds.
     """
     prev_summary = None
-    end = float('inf')
+    end = float("inf")
     while time.time_ns() < end:
         summary = get()
         if halt_fn(summary):
@@ -81,11 +82,13 @@ def await_summary(pred, halt_fn=lambda x: False, unchanged_timeout=60):
         if prev_summary == summary:
             end = time.time_ns() + (unchanged_timeout * 1_000_000_000)
         prev_summary = summary
-        time.sleep(0.03) # 30ms sleep for ~30 requests per second
+        time.sleep(0.03)  # 30ms sleep for ~30 requests per second
 
-    raise Exception("Timed out awaiting summary. Summary went stale for "
-                    + str(unchanged_timeout)
-                    + " seconds")
+    raise Exception(
+        "Timed out awaiting summary. Summary went stale for "
+        + str(unchanged_timeout)
+        + " seconds"
+    )
 
 
 def _assert_success(summary):
@@ -93,9 +96,7 @@ def _assert_success(summary):
         verb_str = ""
         if "error_verb" in summary and summary["error_verb"]:
             verb_str = f' ({summary["error_verb"]})'
-        raise Exception(
-            f'Summary error{verb_str}: {summary["error_msg"]}'
-        )
+        raise Exception(f'Summary error{verb_str}: {summary["error_msg"]}')
     return summary
 
 
@@ -115,7 +116,7 @@ def api(verb, **args):
     Convenience method for API calls. See web/api.md for verbs and their
     arguments.
     """
-    action = args # already a dictionary
+    action = args  # already a dictionary
     action["verb"] = verb
     return api_send_action(action)
 
@@ -129,7 +130,7 @@ def api_send_action(action):
     """
     conn = _get_conn()
     conn.request(
-        "POST","/api", json.dumps(action), {"Content-Type":"application/json"}
+        "POST", "/api", json.dumps(action), {"Content-Type": "application/json"}
     )
     return _read_response_summary(conn.getresponse())
 
@@ -145,8 +146,8 @@ def ephemeral(port="9002"):
 
 def external(host="localhost", port="9001"):
     global HOST, PORT
-    HOST=host
-    PORT=port
+    HOST = host
+    PORT = port
 
 
 def list_projects():
@@ -159,7 +160,10 @@ def list_projects():
 def open_project(id_):
     c = _get_conn()
     c.request(
-        "POST", "/projects", json.dumps(id_), {"Content-Type":"application/json"}
+        "POST",
+        "/projects",
+        json.dumps(id_),
+        {"Content-Type": "application/json"},
     )
     r = c.getresponse()
     ret = r.read()
@@ -271,8 +275,7 @@ def query_async(q, page=0):
 def query(q, page=0):
     query_async(q, page)
     return await_summary(
-        lambda s: s["query_completed"],
-        lambda s: s["query"] != q
+        lambda s: s["query_completed"], lambda s: s["query"] != q
     )
 
 
@@ -300,7 +303,7 @@ def base_rate(class__, rate):
 
 
 def await_plabels():
-    return await_summary(lambda s: s['status'] == "current")
+    return await_summary(lambda s: s["status"] == "current")
 
 
 def hinter_async(class__, query_, weight):
@@ -329,17 +332,21 @@ def title(title_):
 
 
 def external_hinter(class__, name, weight):
-    _assert_success(api(
-        "hinter", query="[external]", name=name, label=class__, weight=weight
-    ))
+    _assert_success(
+        api(
+            "hinter",
+            query="[external]",
+            name=name,
+            label=class__,
+            weight=weight,
+        )
+    )
     return await_plabels()
 
 
 def upload_attributes(
-    dataset_id,
-    attributes_filename,
-    attributes_filepath,
-    project_id):
+    dataset_id, attributes_filename, attributes_filepath, project_id
+):
     """
     This function is used in the case of Watchful application being on a
     machine different from where data enrichment is run.
@@ -365,7 +372,7 @@ def upload_attributes(
         id=dataset_id,
         file=attributes_filename,
         data=open(attributes_filepath, "rb").read(),
-        project_id=project_id
+        project_id=project_id,
     )
 
 
@@ -401,7 +408,7 @@ def dump():
 
 
 def dump_dicts():
-    field_names = get()['field_names']
+    field_names = get()["field_names"]
     for c in dump():
         yield dict(zip(field_names, c))
 
@@ -440,8 +447,10 @@ def export_stream(content_type="text/csv", mode="ftc"):
     conn = _get_conn()
     conn.request(
         "GET",
-        "/export_stream?content-type=" + urllib.parse.quote_plus(content_type) \
-        + "&mode=" + urllib.parse.quote_plus(mode)
+        "/export_stream?content-type="
+        + urllib.parse.quote_plus(content_type)
+        + "&mode="
+        + urllib.parse.quote_plus(mode),
     )
     resp = conn.getresponse()
     assert 200 == int(resp.status)
@@ -459,11 +468,10 @@ def export_dataset(content_type="text/csv", mode="ftc"):
     content_type = urllib.parse.quote_plus(content_type)
     mode = urllib.parse.quote_plus(mode)
     conn.request(
-        "GET",
-        f"/export_dataset?content-type={content_type}&mode={mode}"
+        "GET", f"/export_dataset?content-type={content_type}&mode={mode}"
     )
     resp = conn.getresponse()
-    assert(resp.status == 200), f"Request failed with status {resp.status}."
+    assert resp.status == 200, f"Request failed with status {resp.status}."
     return resp
 
 
@@ -472,9 +480,9 @@ def export_async():
 
 
 def export():
-    n_exports = len(get()['exports'])
+    n_exports = len(get()["exports"])
     export_async()
-    return await_summary(lambda s: len(s['exports']) == n_exports + 1)
+    return await_summary(lambda s: len(s["exports"]) == n_exports + 1)
 
 
 def export_preview(mode="ftc"):
@@ -490,21 +498,22 @@ def create_dataset(csv_bytes, columns, filename="none", has_header=True):
     TODO: Add error handling
     """
     from uuid import uuid4
+
     id_ = str(uuid4())
     conn = _get_conn()
     conn.request(
         "POST",
         "/api/_stream/" + id_ + "/0/true",
         csv_bytes,
-        {"Content-Type":"text/csv"}
+        {"Content-Type": "text/csv"},
     )
     _ = _read_response_summary(conn.getresponse())
-    params = json.dumps({"filename":filename,"has_header":has_header})
+    params = json.dumps({"filename": filename, "has_header": has_header})
     conn.request(
         "POST",
         "/api/_stream/" + id_,
         params,
-        {"Content-Type":"application/json"}
+        {"Content-Type": "application/json"},
     )
     dataset_id = _read_response_summary(conn.getresponse())["id"]
     api("dataset_add", id=dataset_id, columns=columns)
@@ -516,18 +525,19 @@ def label_single(row):
     sio = io.StringIO()
     w = csv.writer(sio)
     w.writerow(row)
-    csv_row = sio.getvalue().encode('utf-8')
+    csv_row = sio.getvalue().encode("utf-8")
     sio.close()
-    c.request("POST", "/label", csv_row, {"Content-Type":"text/csv"})
+    c.request("POST", "/label", csv_row, {"Content-Type": "text/csv"})
     r = c.getresponse()
-    resp_body = r.read().decode('utf-8')
+    resp_body = r.read().decode("utf-8")
     csv_str = io.StringIO(resp_body)
     rdr = csv.reader(csv_str)
     rdr_list = list(rdr)
     if len(rdr_list) == 2:
-        fields = get()['field_names']
-        assert fields == rdr_list[0][0:len(fields)], \
-            "server prepended the header to the labeled row"
+        fields = get()["field_names"]
+        assert (
+            fields == rdr_list[0][0 : len(fields)]
+        ), "server prepended the header to the labeled row"
     else:
         assert len(rdr_list) == 1, "server returned a single row"
     return rdr_list[-1]
@@ -535,14 +545,16 @@ def label_single(row):
 
 def config_set(key, value):
     conn = _get_conn()
-    params = json.dumps({"verb":"set","key":key,"value":value})
-    conn.request("POST","/config", params, {"Content-Type":"application/json"})
+    params = json.dumps({"verb": "set", "key": key, "value": value})
+    conn.request(
+        "POST", "/config", params, {"Content-Type": "application/json"}
+    )
     return _read_response_summary(conn.getresponse())
 
 
 def config():
     conn = _get_conn()
-    conn.request("GET","/config", None, {"Content-Type":"application/json"})
+    conn.request("GET", "/config", None, {"Content-Type": "application/json"})
     return _read_response_summary(conn.getresponse())
 
 
@@ -550,18 +562,22 @@ def print_candidates(summary=None):
     if summary is None:
         summary = get()
     print(
-        "\n".join([",".join(summary['field_names'])] \
-        + list(map(lambda c: ",".join(c['fields']), summary["candidates"])))
+        "\n".join(
+            [",".join(summary["field_names"])]
+            + list(map(lambda c: ",".join(c["fields"]), summary["candidates"]))
+        )
     )
 
 
 def candidate_dicts(summary=None):
     if summary is None:
         summary = get()
-    return list(map(
-        lambda c: dict(zip(summary['field_names'], c['fields'])),
-        summary['candidates']
-    ))
+    return list(
+        map(
+            lambda c: dict(zip(summary["field_names"], c["fields"])),
+            summary["candidates"],
+        )
+    )
 
 
 def exit_backend():
@@ -578,29 +594,31 @@ def exit_backend():
 
 ### Hub API
 
+
 def hub_api(verb, token, **args):
     """
     Convenience method for collaboration API calls.  Makes a hub
     API request of the backend.
     """
-    headers = {"Content-Type":"application/json"}
+    headers = {"Content-Type": "application/json"}
     headers.update({"Authorization": "Bearer " + token})
     action = args  # already a dictionary
     action["verb"] = verb
     conn = _get_conn()
-    conn.request("POST","/remote",json.dumps(action),headers)
+    conn.request("POST", "/remote", json.dumps(action), headers)
     return _assert_success(_read_response_summary(conn.getresponse()))
 
 
 def login(email, password):
     import base64
-    headers = {"Content-Type":"application/json"}
-    credentials = base64.b64encode(
-        str.encode(f"{email}:{password}")
-    ).decode('utf-8')
+
+    headers = {"Content-Type": "application/json"}
+    credentials = base64.b64encode(str.encode(f"{email}:{password}")).decode(
+        "utf-8"
+    )
     headers.update({"Authorization": f"Basic {credentials}"})
     conn = _get_conn()
-    conn.request("POST","/remote", json.dumps({"verb": "login"}), headers)
+    conn.request("POST", "/remote", json.dumps({"verb": "login"}), headers)
     return _assert_success(_read_response_summary(conn.getresponse()))
 
 

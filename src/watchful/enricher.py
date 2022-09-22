@@ -41,7 +41,7 @@ class Enricher(metaclass=ABCMeta):
     @classmethod
     def is_enricher(
         cls,
-        possibly_an_enricher: Generic[TypeVar('T')]
+        possibly_an_enricher: Generic[TypeVar("T")],
     ) -> bool:
         """
         Convenience method for checking if `possibly_an_enricher` is indeed of
