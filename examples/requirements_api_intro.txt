@@ -100,7 +100,6 @@ typer==0.4.2
 typing_extensions==4.3.0
 urllib3==1.26.12
 wasabi==0.10.1
-watchful==0.0.1rc13
 wcwidth==0.2.5
 wheel==0.37.1
 Wikipedia-API==0.5.4
