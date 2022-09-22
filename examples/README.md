@@ -1,13 +1,15 @@
-### Ingestion of Features or Attributes into Watchful
-This readme describes how the script `enrich.py` can be used to add external features or attributes to a Watchful project.<sup>1</sup>
+## Data Enrichment & Ingestion into Watchful
+This readme describes how the Watchful module `enrich.py` can be used to enrich data and then add the enriched data (features or attributes) to a Watchful project.
 
 
-#### Overview
-- `enrich.py` adds external features or attributes from a CSV file to the current Watchful project
-- After the external features or attributes are added, they are queriable in the Watchful application; including being queriable with features of the original dataset already in the Watchful application
-- Note that the features or attributes are not displayed in the list view or table view in the Watchful application
-- As the features or attributes from the latest used CSV file will overwrite those from the previous CSV file, ensure that the latest CSV file contains all the required features or attributes
+### Overview
+- `enrich.py` extracts external attributes from a CSV file, or by creating attributes from the dataset CSV file, and then adds them to the current opened Watchful project
+- After the external attributes are added, they are queriable in the Watchful application; including being queriable with features of the original dataset already in the Watchful application
+- Note that the attributes are not displayed in the list view or table view in the Watchful application
+- As the attributes from the latest used CSV file currently overwrite those from the previous CSV file, ensure that the latest CSV file contains all the required attributes
 
+
+### CSV File
 
 #### Features or Attributes CSV File
 - The features or attributes CSV file should have a header containing the names of the attributes, and the same number of data examples as the original dataset in the Watchful application
@@ -20,35 +22,24 @@ This readme describes how the script `enrich.py` can be used to add external fea
   | ⋮                 | ⋮     | ⋮     | ⋱   | ⋮                |
 - Each row of features or attributes will be associated with the corresponding row in the original dataset in the Watchful application
 
+#### Dataset CSV File
+- The dataset CSV file should be the original dataset that is loaded into Watchful and currently opened in the Watchful application
 
-#### Usage
-`python3 ./enrich.py \`  
-`[--in_file=/path/to/original/dataset.csv] \`  
-`[--out_file=/path/to/output/features/or/attributes/file.attrs] \`  
-`[--attr_file=/path/to/input/features/or/attributes/file.csv] \`  
-`[--attr_names=attr_name_1,attr_name_2,attr_name_n] \`  
-`[--wf_port=9001]`
+### Usage
+- Show all the enrichment options
+```
+python3 -m watchful.enrich -h
+```
 
-- `in_file: str`
-  </br>optional filepath of the original dataset; if not given the current dataset opened in Watchful will be used
-- `out_file: str`
-  </br>optional filepath of the output features or attributes; if given it must end with the \".attrs\" extension
-- `attr_file: str`
-  </br>optional filepath of the input CSV features or attributes; if not given off-the-shelf _spaCy attributes_<sup>2</sup> will be created as the desired attributes
-- `attr_names: str`
-  </br>optional comma-delimited string of attribute names to be used, if not given all attribute names from `attr_file` will be used
-- `wf_port: str`
-  </br>optional port number running Watchful, if not given "9001" will be used
+- Run data enrichment with desired _options_
+```
+python3 -m watchful.enrich [options]
+```
 
-
-#### Requirements
-- Environment: python >=3.7
-- Install packages: 
-  - `pip install -r requirements_enrich.txt`
-  - `pip install -r requirements_notebook.txt` (if you are going to run in Jupyter)
-- Install the Spacy package: `python3 -m spacy download en`
-
-
-#### Notes
-1. This readme also applies to `attributes.py` which outputs the specific features or attributes file but does not add them to a Watchful project.  
-2. These are the part-of-speech, tag, lemma and case of the tokens, entities, noun chunks and sentences (refer to https://spacy.io/usage/linguistic-features).
+### Requirements
+- Environment: python >=3.7.13
+- Install Watchful SDK
+  - `pip3 install watchful --upgrade`
+- Download Spacy model
+  - `python3 -m spacy download en`
+  > If you enrich using this model, it can be used to identify the part-of-speech, tag, lemma and case of the tokens, entities, noun chunks and sentences (refer to https://spacy.io/usage/linguistic-features).
