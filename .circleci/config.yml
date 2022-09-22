@@ -98,8 +98,8 @@ jobs:
           paths:
             - dist/
 
-  install-lint-and-test-sdk:
-    description: "Install, Lint & Test SDK"
+  install-format-lint-and-test-sdk:
+    description: "Install, Format, Lint & Test SDK"
     parameters:
       executor_tag:
         description: "The Python environment that the executor uses"
@@ -208,9 +208,35 @@ jobs:
                   # - "/Library/Frameworks/Python.framework"
                   # - "/System/Library/Frameworks/Python.framework"
       - run:
+          name: Format SDK
+          command: |
+            if [[ << parameters.profile >> = "dev" && << parameters.sdk_location >> = "repo" ]]; then
+              black tests/ src/watchful/ --config pyproject.toml --check
+            elif [[ << parameters.profile >> = "deploy" && << parameters.sdk_location >> = "repo" ]]; then
+              black tests/ src/watchful/ --config pyproject.toml --check
+            elif [[ << parameters.profile >> = "prod" && << parameters.sdk_location >> = "pypi" ]]; then
+              :
+            elif [[ << parameters.profile >> = "deploy" && << parameters.sdk_location >> = "pypi" ]]; then
+              :
+            else
+              echo 'Path for profile=<< parameters.profile >> sdk_location=<< parameters.sdk_location >> is not implemented!'
+              exit 1
+            fi
+      - run:
           name: Lint SDK
           command: |
-            pylama tests/ src/watchful/ -o pylama.ini
+            if [[ << parameters.profile >> = "dev" && << parameters.sdk_location >> = "repo" ]]; then
+              pylama tests/ src/watchful/ -o pylama.ini
+            elif [[ << parameters.profile >> = "deploy" && << parameters.sdk_location >> = "repo" ]]; then
+              pylama tests/ src/watchful/ -o pylama.ini
+            elif [[ << parameters.profile >> = "prod" && << parameters.sdk_location >> = "pypi" ]]; then
+              :
+            elif [[ << parameters.profile >> = "deploy" && << parameters.sdk_location >> = "pypi" ]]; then
+              :
+            else
+              echo 'Path for profile=<< parameters.profile >> sdk_location=<< parameters.sdk_location >> is not implemented!'
+              exit 1
+            fi
       - show-python-environment
       - run:
           name: Run SDK Tests
@@ -303,8 +329,8 @@ workflows:
       - build-sdk:
           name: "Build SDK (Dev)"
           executor_tag: "3.8.12"
-      - install-lint-and-test-sdk:
-          name: "Install, Lint & Test Built SDK (Dev)"
+      - install-format-lint-and-test-sdk:
+          name: "Install, Format, Lint & Test Built SDK (Dev)"
           executor_tag: "3.8.12"
           sdk_location: "repo"
           profile: "dev"
@@ -313,8 +339,8 @@ workflows:
   # This is the workflow to test the SDK from PyPI.
   "Prod":
     jobs:
-      - install-lint-and-test-sdk:
-          name: "Install, Lint & Test PyPI SDK (Prod)"
+      - install-format-lint-and-test-sdk:
+          name: "Install & Test PyPI SDK (Prod)"
           executor_tag: "3.8.12"
           sdk_location: "pypi"
           profile: "prod"
@@ -328,8 +354,8 @@ workflows:
           filters:
             tags:
               only: /^v.*/
-      - install-lint-and-test-sdk:
-          name: "Install, Lint & Test Built SDK (Deploy)"
+      - install-format-lint-and-test-sdk:
+          name: "Install, Format, Lint & Test Built SDK (Deploy)"
           executor_tag: "3.8.12"
           sdk_location: "repo"
           profile: "deploy"
@@ -342,12 +368,12 @@ workflows:
           name: "Publish SDK"
           executor_tag: "3.8.12"
           requires:
-            - "Install, Lint & Test Built SDK (Deploy)"
+            - "Install, Format, Lint & Test Built SDK (Deploy)"
           filters:
             tags:
               only: /^v.*/
-      - install-lint-and-test-sdk:
-          name: "Install, Lint & Test PyPI SDK (Deploy)"
+      - install-format-lint-and-test-sdk:
+          name: "Install & Test PyPI SDK (Deploy)"
           executor_tag: "3.8.12"
           sdk_location: "pypi"
           profile: "deploy"
