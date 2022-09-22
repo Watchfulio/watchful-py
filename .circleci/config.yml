@@ -167,9 +167,12 @@ jobs:
               printenv | grep ____SDK_VERSION
               pip3 uninstall watchful==${____SDK_VERSION} -y || true
               pip3 show watchful | grep 'Version' || true
-              echo "attempt 1..."; pip3 install watchful==${____SDK_VERSION}; sleep 3 \
-                || echo "attempt 2..."; pip3 install watchful==${____SDK_VERSION}; sleep 3 \
-                || echo "attempt 3..."; pip3 install watchful==${____SDK_VERSION}
+              (echo "Attempt 1..." && pip3 install watchful==${____SDK_VERSION}) \
+                || (sleep 3 && echo "Attempt 2..." && pip3 install watchful==${____SDK_VERSION}) \
+                || (sleep 3 && echo "Attempt 3..." && pip3 install watchful==${____SDK_VERSION}) \
+                || (sleep 3 && echo "Attempt 4..." && pip3 install watchful==${____SDK_VERSION}) \
+                || (sleep 3 && echo "Attempt 5..." && pip3 install watchful==${____SDK_VERSION}) \
+                || (echo "Failed to download SDK from PyPI..." && exit 1)
               pip3 show watchful | grep 'Version'
             else
               echo 'Path for profile=<< parameters.profile >> sdk_location=<< parameters.sdk_location >> is not implemented!'
