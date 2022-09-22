@@ -47,51 +47,51 @@ def main(args: List[str]=None, custom_enricher: Enricher=None) -> None:
     # from the remote Watchful application.
     parser.add_argument(
         "--in_file", type=str, default="",
-        help="optional original csv dataset filepath, if not given use the \
+        help="Optional original csv dataset filepath, if not given use the \
             current dataset opened in watchfu."
     )
     # This is the attributes output file that is specifically formatted for
     # integration with the Watchful application.
     parser.add_argument(
         "--out_file", type=str, default="",
-        help="optional output attribute filepath; if given must end with \
+        help="Optional output attribute filepath; if given must end with \
             \".attrs\" extension."
     )
     # The attribute file to ingest from, if it is available.
     parser.add_argument(
         "--attr_file", type=str, default="",
-        help="optional input csv attribute filepath, if not given create the \
+        help="Optional input csv attribute filepath, if not given create the \
             initial spacy attributes."
     )
     # Columns in the `attr_file` csv file to use as attributes; use all
     # attributes if not provided.
     parser.add_argument(
         "--attr_names", type=str, default="",
-        help="optional comma delimited string of attribute names to be used, \
+        help="Optional comma delimited string of attribute names to be used, \
             if not given use all attribute names."
     )
     # The host to use; if not provided use localhost.
     parser.add_argument(
         "--wf_host", type=str, default="localhost",
-        help="optional string host running Watchful, if not given use \
+        help="Optional string host running Watchful, if not given use \
             \"localhost\"."
     )
     # The port to use; if not provided use port 9001.
     parser.add_argument(
         "--wf_port", type=str, default="9001",
-        help="optional string port number running Watchful, if not given use \
+        help="Optional string port number running Watchful, if not given use \
             \"9001\"."
     )
     # The out-of-the-box NLP to use if no `attr_file` is provided.
     parser.add_argument(
         "--standard_nlp", type=str, default="spacy",
-        help="Standard NLP to use, currently \"spacy\" and \"flair\" are \
-            available; \"spacy\" if unspecified."
+        help="Optional out-of-the-box NLP to use, currently \"spacy\" and \
+            \"flair\" are available; \"spacy\" if unspecified."
     )
     parser.add_argument(
         "--multiprocessing", action="store_true",
-        help="Explicit use of multiprocessing on available physical cpu \
-            cores; no explicit use if unspecified."
+        help="Optional explicit use of multiprocessing on available physical \
+            cpu cores; no explicit use if unspecified."
     )
     args = parser.parse_args(args=args)
 
