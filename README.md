@@ -6,7 +6,7 @@ This project serves to publish the Watchful Python Package, so that manual distr
 
 The current features include the following and their corresponding user guides:
 - Watchful API and [notebook](https://github.com/Watchfulio/watchful-py/blob/main/examples/api_intro.ipynb)
-- [Data Enrichment](https://github.com/Watchfulio/watchful-py/blob/main/examples/README_enrich.md) and [notebook](https://github.com/Watchfulio/watchful-py/blob/main/examples/enrichment_intro.ipynb)
+- [Data Enrichment](https://github.com/Watchfulio/watchful-py/blob/main/examples/README.md) and [notebook](https://github.com/Watchfulio/watchful-py/blob/main/examples/enrichment_intro.ipynb)
 <br><br>
 
 ## Steps
@@ -29,15 +29,15 @@ pip3 install pylint==2.13.9 pylama==8.3.8 black==22.3.0 pytest==7.1.1 nbval==0.9
 <br>
 
 ### Code Practices
-If contributing to this code, you're encouraged to apply the following code practices.
+If contributing to this code, you're encouraged to apply the following code practices. To apply to the source code in `watchful-py/src/watchful/`,
 ```
 cd to/the/repo_directory/that/being/watchful-py
 ```
 ```
-pylama src/watchful/api.py -o pylama.ini
+pylama src/watchful/ -o pylama.ini
 ```
 ```
-black src/watchful/api.py --config=pyproject.toml
+black src/watchful/ --config=pyproject.toml --diff
 ```
 <br>
 
