@@ -34,14 +34,14 @@ BASE = 64
 COMP_LEN = 8
 
 # '0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmno'
-numerals = dict(map(
-    lambda ic: (ic[0], chr(ic[1])), enumerate(range(48, 48+BASE))
-))
+numerals = dict(
+    map(lambda ic: (ic[0], chr(ic[1])), enumerate(range(48, 48 + BASE)))
+)
 
 # "#$%&'()*"
-compressed = dict(map(
-    lambda ic: (ic[0], chr(ic[1])), enumerate(range(35, 35+COMP_LEN))
-))
+compressed = dict(
+    map(lambda ic: (ic[0], chr(ic[1])), enumerate(range(35, 35 + COMP_LEN)))
+)
 
 
 def set_multiprocessing(is_multiproc: bool) -> None:
@@ -126,7 +126,7 @@ def base64str(coll):
             ret.append(buf[0])
         elif buf_len > 1:
             compress_idx = len(buf[0]) - 1
-            if compress_idx < len(compressed): # compressed limit
+            if compress_idx < len(compressed):  # compressed limit
                 ret.append(compressed[compress_idx] + "".join(buf))
             else:
                 for x in buf:
@@ -178,8 +178,8 @@ def writer(out, n_rows, n_cols):
     values = {}
 
     def write_jsonl(obj):
-        json.dump(obj, out, separators=(',',':'))
-        out.write('\n')
+        json.dump(obj, out, separators=(",", ":"))
+        out.write("\n")
 
     def write(cell_data):
         new_attrs = []
@@ -196,7 +196,7 @@ def writer(out, n_rows, n_cols):
 
             # Gather the new attributes and values
             # Gather and create new mappings at the same time. Duh :)
-            for (attr,vals) in attr_vals.items():
+            for (attr, vals) in attr_vals.items():
                 if attr not in attrs:
                     attrs[attr] = len(attrs) + 1
                     values[attr] = {}
@@ -205,8 +205,10 @@ def writer(out, n_rows, n_cols):
                     if isinstance(val, numbers.Number):
                         val = str(val)
                     elif val and not isinstance(val, str):
-                        raise Exception("Attribute value must be a string, "
-                            "None or a number. Was: " + val)
+                        raise Exception(
+                            "Attribute value must be a string, "
+                            "None or a number. Was: " + val
+                        )
                     if val and not val in values[attr]:
                         values[attr][val] = len(values[attr]) + 1
                         if attr not in new_values:
@@ -217,9 +219,10 @@ def writer(out, n_rows, n_cols):
             span_val = []
             if name is not None:
                 span_val.append(name)
-            for (attr,vals) in attr_vals.items():
-                assert len(span) == len(vals), \
-                    "Must be the same amount of spans as attribute values."
+            for (attr, vals) in attr_vals.items():
+                assert len(span) == len(
+                    vals
+                ), "Must be the same amount of spans as attribute values."
                 # Not base64 the attributes to save space since there aren't
                 # that many of them.
                 span_val.append(attrs[attr])
@@ -239,7 +242,7 @@ def writer(out, n_rows, n_cols):
         write_jsonl(cell)
 
     # Write the header and return the write function to be called by users
-    write_jsonl({"version":"0.3","rows":n_rows,"cols":n_cols})
+    write_jsonl({"version": "0.3", "rows": n_rows, "cols": n_cols})
     return write
 
 
@@ -258,14 +261,24 @@ def spacy_atterize(doc):
         return str(round(f * 100.0))
 
     # Polarity and subjectivity via nlp.add_pipe("spacytextblob")
-    cell.append(([(0, len(doc.text))],
-             {"polarity": [float_to_str(doc._.blob.polarity)],
-              "subjectivity": [float_to_str(doc._.blob.subjectivity)]}))
+    cell.append(
+        (
+            [(0, len(doc.text))],
+            {
+                "polarity": [float_to_str(doc._.blob.polarity)],
+                "subjectivity": [float_to_str(doc._.blob.subjectivity)],
+            },
+        )
+    )
 
     # Token level assessment of the polarity and subjectivity
     assessments = {}
-    for (words, polarity, subjectivity, _) in \
-        doc._.blob.sentiment_assessments.assessments:
+    for (
+        words,
+        polarity,
+        subjectivity,
+        _,
+    ) in doc._.blob.sentiment_assessments.assessments:
         for word in words:
             regex = re.compile(f"\\b{re.escape(word)}\\b")
             for m in regex.finditer(doc.text):
@@ -276,7 +289,7 @@ def spacy_atterize(doc):
                     (c, ps, ss) = assessments.get(span)
                     ps.append(polarity)
                     ss.append(subjectivity)
-                    assessments[span] = (c+1, ps, ss)
+                    assessments[span] = (c + 1, ps, ss)
     assess_spans = []
     pol_vals = []
     subj_vals = []
@@ -285,10 +298,12 @@ def spacy_atterize(doc):
         assess_spans.append(span)
         pol_vals.append(float_to_str(sum(ps) / c))
         subj_vals.append(float_to_str(sum(ss) / c))
-    cell.append((
-        assess_spans,
-        {"token_polarity": pol_vals, "token_subjectivity": subj_vals}
-    ))
+    cell.append(
+        (
+            assess_spans,
+            {"token_polarity": pol_vals, "token_subjectivity": subj_vals},
+        )
+    )
 
     # Token level attributes
     tok_spans = []
@@ -323,11 +338,18 @@ def spacy_atterize(doc):
             case = "currency"
         case_vals.append(case)
 
-    cell.append((
-        tok_spans,
-        {"pos":pos_vals,"tag":tag_vals,"lemma":lem_vals,"case":case_vals},
-        "TOKS"
-    ))
+    cell.append(
+        (
+            tok_spans,
+            {
+                "pos": pos_vals,
+                "tag": tag_vals,
+                "lemma": lem_vals,
+                "case": case_vals,
+            },
+            "TOKS",
+        )
+    )
 
     # Entities
     ent_spans = []
@@ -335,19 +357,19 @@ def spacy_atterize(doc):
     for ent in doc.ents:
         ent_spans.append((ent.start_char, ent.end_char))
         ent_vals.append(ent.label_)
-    cell.append((ent_spans, {"entity":ent_vals}))
+    cell.append((ent_spans, {"entity": ent_vals}))
 
     # Sentences and noun chunks
-    cell.append((
-        [(sent.start_char, sent.end_char) for sent in doc.sents],
-        {},
-        "SENTS"
-    ))
-    cell.append((
-        [(chunk.start_char, chunk.end_char) for chunk in doc.noun_chunks],
-        {},
-        "NOUNCH"
-    ))
+    cell.append(
+        ([(sent.start_char, sent.end_char) for sent in doc.sents], {}, "SENTS")
+    )
+    cell.append(
+        (
+            [(chunk.start_char, chunk.end_char) for chunk in doc.noun_chunks],
+            {},
+            "NOUNCH",
+        )
+    )
 
     return cell
 
@@ -355,8 +377,9 @@ def spacy_atterize(doc):
 def spacy_atterize_fn(cell, spacy_atterize_, nlp):
     # Adding spacytextblob, cannot do it in load_spacy because of
     # our multiprocessing code. Adding a pipe to SpaCy is idempotent.
-    from spacytextblob.spacytextblob import SpacyTextBlob \
-        # pylint: disable=unused-import
+    from spacytextblob.spacytextblob import (  # pylint: disable=unused-import
+        SpacyTextBlob,
+    )
 
     if not nlp.has_pipe("spacytextblob"):
         nlp.add_pipe("spacytextblob")
@@ -365,7 +388,8 @@ def spacy_atterize_fn(cell, spacy_atterize_, nlp):
 
 def load_spacy():
     import spacy
-    #nlp = spacy.load("en_core_web_sm", exclude=["parser"])
+
+    # nlp = spacy.load("en_core_web_sm", exclude=["parser"])
     nlp = spacy.load("en_core_web_sm")
     nlp.enable_pipe("senter")
     return nlp
@@ -381,9 +405,7 @@ def flair_atterize(sent):
     for ent in sent.get_spans("ner"):
         ent_spans.append((ent.start_position, ent.end_position))
         ent_values.append(ent.get_label("ner").value)
-        ent_scores.append(
-            str(int(round(ent.get_label("ner").score, 2) * 100))
-        )
+        ent_scores.append(str(int(round(ent.get_label("ner").score, 2) * 100)))
     enriched_cell.append(
         (ent_spans, {"entity": ent_values, "score": ent_scores}, "ENTS")
     )
@@ -400,6 +422,7 @@ def flair_atterize_fn(cell, flair_atterize_, tagger_pred, sent_fn):
 def load_flair():
     from flair.data import Sentence
     from flair.models import SequenceTagger
+
     # import logging
     # import warnings
 
@@ -442,7 +465,7 @@ def adjust_span_offsets_from_char_to_byte(raw_cell, cell):
 
     for char_offset, ch in enumerate(raw_cell):
         byte_offsets[char_offset] = byte_offset
-        byte_offset += len(ch.encode('utf-8'))
+        byte_offset += len(ch.encode("utf-8"))
     byte_offsets[len(raw_cell)] = byte_offset
 
     for context in cell:
@@ -492,8 +515,9 @@ def enrich(
         for n_rows, _ in enumerate(in_reader, 1):
             pass
 
-    with open(in_file, "r", encoding=sys_encoding) as infile, \
-        open(out_file, "w", encoding=sys_encoding) as outfile:
+    with open(in_file, "r", encoding=sys_encoding) as infile, open(
+        out_file, "w", encoding=sys_encoding
+    ) as outfile:
 
         in_reader = csv.reader(infile)
         next(in_reader)
@@ -551,7 +575,7 @@ def proc_enriched_row(
     # something else with every row. Here
     # we simply print to stdout at the end
     # of every `enriched_row`.
-    #print(f'{"*" * 20} end of row {"*" * 20}')
+    # print(f'{"*" * 20} end of row {"*" * 20}')
     ########################################
 
 
@@ -573,25 +597,29 @@ def proc_enriched_cell(
     # something else with every cell. Here
     # we simply print every `enriched_cell`
     # to stdout.
-    #print("Enriched cell: ")
-    #pprint(enriched_cell)
+    # print("Enriched cell: ")
+    # pprint(enriched_cell)
     ########################################
 
 
 def get_vars_for_enrich_row_with_attribute_data(attr_names, attr_file):
 
-    f = open(attr_file, "r", encoding=sys.getdefaultencoding()) \
-        # pylint: disable=consider-using-with
+    f = open(  # pylint: disable=consider-using-with
+        attr_file, "r", encoding=sys.getdefaultencoding()
+    )
     attr_reader = csv.reader(f)
     attr_name_list_all = next(attr_reader)
 
     if not attr_names:
         attr_name_list = attr_name_list_all
+
         def get_attr_row(attr_row_all):
             return attr_row_all
+
     else:
         attr_name_list = attr_names.split(",")
         attr_locs = list(map(attr_name_list_all.index, attr_name_list))
+
         def get_attr_row(attr_row_all):
             return list(map(attr_row_all.__getitem__, attr_locs))
 
@@ -675,6 +703,7 @@ def atterize_values_in_cell(cell, name, values):
     """
 
     from heapq import merge
+
     cell = str(cell)
     matches = [
         [(m.start(), m.end()) for m in re.finditer(pattern, cell)]
@@ -699,7 +728,7 @@ def create_attribute_for_values(attribute_name, values):
         in_file,
         out_file,
         enrich_row,
-        (atterize_values_in_cell, attribute_name, values)
+        (atterize_values_in_cell, attribute_name, values),
     )
     return out_filename
 
@@ -713,13 +742,12 @@ def get_context(attribute_filename):
     """
 
     summary = client.get()
-    attrs_dir = os.path.join(summary['watchful_home'], "datasets", "attrs")
+    attrs_dir = os.path.join(summary["watchful_home"], "datasets", "attrs")
     os.makedirs(attrs_dir, exist_ok=True)
     _, _, in_file = get_dataset_id_dir_filepath(summary)
     in_filename = os.path.basename(in_file)
     out_file = os.path.join(
-        attrs_dir,
-        f"{in_filename}_{attribute_filename}.attrs"
+        attrs_dir, f"{in_filename}_{attribute_filename}.attrs"
     )
     out_filename = os.path.basename(out_file)
     return in_file, out_file, out_filename

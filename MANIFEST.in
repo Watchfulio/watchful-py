@@ -1,5 +1,9 @@
 include src/watchful/VERSION
-include src/watchful/data/*
 include README_PYPI.md
+include README_PY_ENV.md
 include pylama.ini
+include examples/README.md
+include examples/requirements_api_intro.txt
+include examples/api_intro.ipynb
+include examples/enrichment_intro.ipynb
 global-exclude ______*

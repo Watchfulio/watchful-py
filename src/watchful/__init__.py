@@ -20,5 +20,6 @@ THIS_FILE_DIR = os.path.dirname(os.path.abspath(__file__))
 with open(
     os.path.join(THIS_FILE_DIR, "VERSION"),
     "r",
-    encoding=sys.getdefaultencoding()) as f:
+    encoding=sys.getdefaultencoding(),
+) as f:
     __version__ = f.readline()

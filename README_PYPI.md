@@ -16,7 +16,7 @@ Create a Python virtual environment and activate it. The following are a few way
 - [`venv`](https://docs.python.org/3/library/venv.html)
 - [`virtualenv`](https://virtualenv.pypa.io/en/latest/)
 
-Refer to `README_PY_ENV.md` in the package directory for more steps on creating Python environments.
+For more steps on creating Python environments, refer to [Watchful SDK repository](https://github.com/Watchfulio/watchful-py/blob/main/README_PY_ENV.md) or `README_PY_ENV.md` in the package directory.
 <br><br>
 
 ### Install Watchful Package
