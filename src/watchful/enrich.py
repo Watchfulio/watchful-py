@@ -49,7 +49,7 @@ def main(args: List[str] = None, custom_enricher: Enricher = None) -> None:
         "--in_file",
         type=str,
         default="",
-        help="Optional original csv dataset filepath, if not given use the \
+        help="Optional original csv dataset filepath; if not given use the \
             current dataset opened in watchfu.",
     )
     # This is the attributes output file that is specifically formatted for
@@ -66,7 +66,7 @@ def main(args: List[str] = None, custom_enricher: Enricher = None) -> None:
         "--attr_file",
         type=str,
         default="",
-        help="Optional input csv attribute filepath, if not given create the \
+        help="Optional input csv attribute filepath; if not given create the \
             initial spacy attributes.",
     )
     # Columns in the `attr_file` csv file to use as attributes; use all
@@ -75,7 +75,7 @@ def main(args: List[str] = None, custom_enricher: Enricher = None) -> None:
         "--attr_names",
         type=str,
         default="",
-        help="Optional comma delimited string of attribute names to be used, \
+        help="Optional comma delimited string of attribute names to be used; \
             if not given use all attribute names.",
     )
     # The host to use; if not provided use localhost.
@@ -83,7 +83,7 @@ def main(args: List[str] = None, custom_enricher: Enricher = None) -> None:
         "--wf_host",
         type=str,
         default="localhost",
-        help='Optional string host running Watchful, if not given use \
+        help='Optional string host running Watchful; if not given use \
             "localhost".',
     )
     # The port to use; if not provided use port 9001.
@@ -91,7 +91,7 @@ def main(args: List[str] = None, custom_enricher: Enricher = None) -> None:
         "--wf_port",
         type=str,
         default="9001",
-        help='Optional string port number running Watchful, if not given use \
+        help='Optional string port number running Watchful; if not given use \
             "9001".',
     )
     # The out-of-the-box NLP to use if no `attr_file` is provided.
@@ -108,13 +108,17 @@ def main(args: List[str] = None, custom_enricher: Enricher = None) -> None:
         help="Optional explicit use of multiprocessing on available physical \
             cpu cores; no explicit use if unspecified.",
     )
+    parser.add_argument(
+        "--is_local",
+        action="store_true",
+        help="Optional use of local watchful client application instead of a \
+            hosted application; hosted application if unspecified.",
+    )
     args = parser.parse_args(args=args)
 
     attributes.set_multiprocessing(args.multiprocessing)
 
     client.external(host=args.wf_host, port=args.wf_port)
-
-    is_local = args.wf_host in ["localhost", "127.0.0.1"]
 
     summary = client.get()
     project_id = client.get_project_id(summary)
@@ -122,12 +126,14 @@ def main(args: List[str] = None, custom_enricher: Enricher = None) -> None:
         dataset_id,
         datasets_dir,
         args.in_file,
-    ) = attributes.get_dataset_id_dir_filepath(summary, args.in_file, is_local)
+    ) = attributes.get_dataset_id_dir_filepath(
+        summary, args.in_file, args.is_local
+    )
 
     # `args.in_file` will still be returned as "" if Watchful application is
     # remote. Therefore, we create a temporary filepath for `args.in_file` to
     # download the original dataset to.
-    if not is_local:
+    if not args.is_local:
         if args.in_file == "":
             user_home_path = os.path.expanduser("~")
             working_dir = os.path.join(user_home_path, "watchful", "working")
@@ -294,7 +300,7 @@ def main(args: List[str] = None, custom_enricher: Enricher = None) -> None:
 
     # If Watchful application is remote, delete the downloaded dataset as the
     # data enrichment is completed.
-    if not is_local:
+    if not args.is_local:
         try:
             os.remove(args.in_file)
         except FileNotFoundError as err_msg:
@@ -314,7 +320,7 @@ def main(args: List[str] = None, custom_enricher: Enricher = None) -> None:
         )
         sys.exit(1)
     current_dataset_id, *_ = attributes.get_dataset_id_dir_filepath(
-        summary, args.in_file, is_local
+        summary, args.in_file, args.is_local
     )
     if dataset_id != current_dataset_id:
         print(
@@ -343,7 +349,7 @@ def main(args: List[str] = None, custom_enricher: Enricher = None) -> None:
 
     # Copy created attributes output file to watchful home attributes directory
     # if the watchful application is local.
-    if is_local:
+    if args.is_local:
         dest_attr_filepath = os.path.join(
             datasets_dir, "attrs", dest_attr_filename
         )
