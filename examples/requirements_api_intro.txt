@@ -32,7 +32,7 @@ ipython-genutils==0.2.0
 Janome==0.4.2
 jedi==0.17.2
 Jinja2==3.1.2
-joblib==1.1.0
+joblib==1.2.0
 jupyter-client==6.1.7
 jupyter-core==4.6.3
 kiwisolver==1.4.4
