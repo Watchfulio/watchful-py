@@ -87,7 +87,7 @@ sqlitedict==2.0.0
 srsly==2.4.4
 stack-data==0.5.0
 tabulate==0.8.10
-textblob==0.15.3
+textblob==0.17.1
 thinc==8.1.0
 threadpoolctl==3.1.0
 tokenizers==0.12.1
