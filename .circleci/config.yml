@@ -46,7 +46,7 @@ commands:
     description: "Install dev and test deps"
     steps:
       - restore_cache:
-          key: v2-sdk-dev-and-test-deps-{{ arch }}__{{ checksum "requirements_dev.txt" }}_{{ checksum "requirements_test.txt" }}
+          key: v3-sdk-dev-and-test-deps-{{ arch }}__{{ checksum "requirements_dev.txt" }}_{{ checksum "requirements_test.txt" }}
       - run:
           name: "Install dev deps"
           command: |
@@ -56,7 +56,7 @@ commands:
           command: |
             pip3 install -r requirements_test.txt
       - save_cache:
-          key: v2-sdk-dev-and-test-deps-{{ arch }}__{{ checksum "requirements_dev.txt" }}_{{ checksum "requirements_test.txt" }}
+          key: v3-sdk-dev-and-test-deps-{{ arch }}__{{ checksum "requirements_dev.txt" }}_{{ checksum "requirements_test.txt" }}
           paths:
             - "~/.pyenv"
 
@@ -112,6 +112,23 @@ jobs:
       - persist_to_workspace:
           root: ~/repo/
           paths: ./
+
+  create-dev-test-deps-cache:
+    description: "Create cache for dev and test deps"
+    parameters:
+      executor_tag:
+        description: "The Python env that the executor uses"
+        type: string
+        default: "3.8.12"
+    executor:
+      name: linux-python
+      tag: << parameters.executor_tag >>
+    working_directory: ~/repo/
+    steps:
+      - attach_workspace:
+          at: ~/repo/
+      - show-py-env
+      - install-or-restore-dev-and-test-deps
 
   format-code:
     description: "Format code"
@@ -337,29 +354,34 @@ workflows:
     jobs:
       - checkout:
           name: "Checkout (Dev)"
+      - create-dev-test-deps-cache:
+          name: "Create cache for dev and test deps (Dev)"
+          executor_tag: "3.8.12"
+          requires:
+            - "Checkout (Dev)"
       - format-code:
           name: "Format SDK (Dev)"
           executor_tag: "3.8.12"
           directory: "src/watchful/"
           requires:
-            - "Checkout (Dev)"
+            - "Create cache for dev and test deps (Dev)"
       - format-code:
           name: "Format Tests (Dev)"
           executor_tag: "3.8.12"
           directory: "tests/"
           requires:
-            - "Checkout (Dev)"
+            - "Create cache for dev and test deps (Dev)"
       - lint-code:
           name: "Lint SDK (Dev)"
           executor_tag: "3.8.12"
           directory: "src/watchful/"
           requires:
-            - "Checkout (Dev)"
+            - "Create cache for dev and test deps (Dev)"
       - build-sdk:
           name: "Build SDK (Dev)"
           executor_tag: "3.8.12"
           requires:
-            - "Checkout (Dev)"
+            - "Create cache for dev and test deps (Dev)"
       - install-sdk:
           name: "Install SDK (Dev)"
           executor_tag: "3.8.12"
@@ -386,13 +408,18 @@ workflows:
     jobs:
       - checkout:
           name: "Checkout (Prod)"
+      - create-dev-test-deps-cache:
+          name: "Create cache for dev and test deps (Prod)"
+          executor_tag: "3.8.12"
+          requires:
+            - "Checkout (Prod)"
       - install-sdk:
           name: "Install SDK (Prod)"
           executor_tag: "3.8.12"
           sdk_location: "pypi"
           profile: "prod"
           requires:
-            - "Checkout (Prod)"
+            - "Create cache for dev and test deps (Prod)"
       - test-sdk:
           name: "Test SDK (Prod)"
           executor_tag: "3.8.12"
@@ -410,12 +437,20 @@ workflows:
           filters:
             tags:
               only: /^v\d+\.\d+\.\d+[a-z]*\d*$/
+      - create-dev-test-deps-cache:
+          name: "Create cache for dev and test deps (Deploy)"
+          executor_tag: "3.8.12"
+          requires:
+            - "Checkout (Deploy)"
+          filters:
+            tags:
+              only: /^v\d+\.\d+\.\d+[a-z]*\d*$/
       - format-code:
           name: "Format SDK (Deploy)"
           executor_tag: "3.8.12"
           directory: "src/watchful/"
           requires:
-            - "Checkout (Deploy)"
+            - "Create cache for dev and test deps (Deploy)"
           filters:
             tags:
               only: /^v\d+\.\d+\.\d+[a-z]*\d*$/
@@ -424,7 +459,7 @@ workflows:
           executor_tag: "3.8.12"
           directory: "tests/"
           requires:
-            - "Checkout (Deploy)"
+            - "Create cache for dev and test deps (Deploy)"
           filters:
             tags:
               only: /^v\d+\.\d+\.\d+[a-z]*\d*$/
@@ -433,7 +468,7 @@ workflows:
           executor_tag: "3.8.12"
           directory: "src/watchful/"
           requires:
-            - "Checkout (Deploy)"
+            - "Create cache for dev and test deps (Deploy)"
           filters:
             tags:
               only: /^v\d+\.\d+\.\d+[a-z]*\d*$/
@@ -441,7 +476,7 @@ workflows:
           name: "Build SDK (Deploy)"
           executor_tag: "3.8.12"
           requires:
-            - "Checkout (Deploy)"
+            - "Create cache for dev and test deps (Deploy)"
           filters:
             tags:
               only: /^v\d+\.\d+\.\d+[a-z]*\d*$/

@@ -4,4 +4,5 @@ include README_PY_ENV.md
 include pylama.ini
 include examples/requirements_api_intro.txt
 include examples/api_intro.ipynb
+exclude src/watchful/hub.py
 global-exclude ______*

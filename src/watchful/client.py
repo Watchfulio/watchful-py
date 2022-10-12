@@ -113,8 +113,7 @@ def _read_response_summary(resp):
 
 def api(verb, **args):
     """
-    Convenience method for API calls. See web/api.md for verbs and their
-    arguments.
+    Convenience method for API calls; made up of a verb and some arguments.
     """
     action = args  # already a dictionary
     action["verb"] = verb
@@ -286,7 +285,7 @@ def query_all(q, max_pages=0):
     setting max_pages to the positive number of pages you want.
     Each query result is a vector with a string for each field that is returned.
     Note: TOKS, SENTS, CELLS queries only return one field and each result will
-          be wrapped in a vector of one string.
+    be wrapped in a vector of one string.
     """
     page = 0
     while True:

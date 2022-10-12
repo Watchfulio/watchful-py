@@ -162,15 +162,15 @@ def writer(out, n_rows, n_cols):
 
     The cells attributes should be in this shape:
     [(spans:Vec<(int,int)>, attr_vals:Map<String,Vec<Any>>, name:Option<String>)
-     ..
+    ..
     ]
     * `spans` is a sorted vector of span [start, end) in the cell.
     * `attr_vals` is a map from attribute name to values for the `spans`. None
-      means that the attribute has no value for that token defined by its span.
+    means that the attribute has no value for that token defined by its span.
     * `name` is an optional parameter which can be used to give a name to the
-      spans, where the attribute value of that name is the content of the spans
-      themselves. Examples of this is: sentences, noun_chunks, tokens or
-      collage_names.
+    spans, where the attribute value of that name is the content of the spans
+    themselves. Examples of this is: sentences, noun_chunks, tokens or
+    collage_names.
     """
 
     # Write attribute and value mappings
@@ -500,12 +500,13 @@ def enrich(
     Usage:
     in_file: filepath of the csv formatted original dataset
     out_file: filepath where the enriched attributes in Watchful custom format
-              for Watchful client ingestion are saved to
+    for Watchful client ingestion are saved to
     enrich_row_fn: user custom function for enriching every row of the dataset
     enrichment_args: additional user variables to perform the data enrichment
 
     Generally, you should not need to edit this function.
     """
+
     sys_encoding = sys.getdefaultencoding()
 
     with open(in_file, "r", encoding=sys_encoding) as infile:
