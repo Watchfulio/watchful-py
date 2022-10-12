@@ -60,7 +60,7 @@ pptree==3.1
 preshed==3.0.7
 prompt-toolkit==3.0.8
 psutil==5.9.2
-ptyprocess==0.6.0
+ptyprocess==0.7.0
 pure-eval==0.2.2
 py4j==0.10.9.7
 pydantic==1.8.2
