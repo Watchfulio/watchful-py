@@ -1,5 +1,5 @@
 """
-This script provides the template `Enricher `class interface for adding your
+This script provides the template ``Enricher`` class interface for adding your
 custom data enrichment functions and models. Some example enricher classes are
 provided below for your reference.
 """
