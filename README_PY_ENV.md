@@ -7,7 +7,6 @@ The following are a few ways to create Python environments:
 - [`virtualenv`](https://virtualenv.pypa.io/en/latest/)
 
 The steps for `pyenv` and `conda` are provided below.
-<br><br>
 
 ## pyenv
 
@@ -42,7 +41,6 @@ python3 -V
 > Python 3.7.13
 > ```
 - From this point, you can continue using your environment to install your Python packages and run your Python code.
-<br><br>
 
 ## conda
 - Install [`anaconda`](https://conda.io/projects/conda/en/latest/user-guide/install/index.html)
