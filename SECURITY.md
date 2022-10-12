@@ -2,7 +2,7 @@
 
 ## Supported Versions
 
-As of the publishing of the v1.0 tag, we will no longer support release-candidate versions prior to v1. 
+As of the publishing of the v1.0.0 tag, we will no longer support release-candidate versions prior to v1.0.0. 
 
 ## Reporting a Vulnerability
 
