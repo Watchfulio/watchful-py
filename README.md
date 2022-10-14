@@ -1,5 +1,4 @@
 # Watchful Python Package for Interacting with Watchful Environment
-<br>
 
 ## Overview
 This project serves to publish the Watchful Python Package, so that manual distribution can be discontinued and users can install it into their Python environment in their machines over the internet from PyPI. This also helps in the automation of Watchful Python features when used with the product. 
@@ -10,10 +9,22 @@ The current features include the following and their corresponding user guides:
 - [Data Enrichment](https://github.com/Watchfulio/watchful-py/blob/main/examples/README.md) and [notebook](https://github.com/Watchfulio/watchful-py/blob/main/examples/enrichment_intro.ipynb)
 --->
 
-## Steps
+## Steps (Use)
 
 ### Create Python Enviroment
-Refer [here](https://github.com/Watchfulio/watchful-py/blob/main/README_PY_ENV.md) for options.
+- Refer [here](https://github.com/Watchfulio/watchful-py/blob/main/README_PY_ENV.md) for options.
+
+### Install Watchful Package from PyPI
+- Install your desired release version (they can be found at [PyPI](https://pypi.org/project/watchful/))
+```command
+pip3 install watchful[==your.desired.version]
+```
+- Go through Watchful API introduction [notebook](https://github.com/Watchfulio/watchful-py/blob/main/examples/api_intro.ipynb).
+
+## Steps (Development)
+
+### Create Python Enviroment
+- Refer [here](https://github.com/Watchfulio/watchful-py/blob/main/README_PY_ENV.md) for options.
 
 ### Upgrade Tools
 - Upgrade or install `pip`, build and test tools
