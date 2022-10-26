@@ -58,7 +58,7 @@ Pillow==9.2.0
 pip==22.1.2
 pptree==3.1
 preshed==3.0.7
-prompt-toolkit==3.0.8
+prompt-toolkit==3.0.31
 psutil==5.9.2
 ptyprocess==0.7.0
 pure-eval==0.2.2
