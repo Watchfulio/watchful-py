@@ -44,7 +44,7 @@ matplotlib==3.5.3
 matplotlib-inline==0.1.6
 more-itertools==8.14.0
 mpld3==0.3
-murmurhash==1.0.8
+murmurhash==1.0.9
 networkx==2.8.6
 nltk==3.7
 numpy==1.23.2
