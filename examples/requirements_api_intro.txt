@@ -54,7 +54,7 @@ parso==0.8.3
 pathy==0.6.2
 pexpect==4.8.0
 pickleshare==0.7.5
-Pillow==9.2.0
+Pillow==9.3.0
 pip==22.1.2
 pptree==3.1
 preshed==3.0.7
