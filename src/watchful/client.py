@@ -362,6 +362,7 @@ def upload_attributes(dataset_id, attributes_filepath):
         )
     resp = conn.getresponse()
     assert resp.status == 200, f"not OK HTTP status. Was: {resp.status}"
+    return _assert_success(_read_response_summary(resp))
 
 
 def load_attributes(dataset_id, attributes_filename):
