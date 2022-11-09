@@ -343,9 +343,7 @@ def external_hinter(class__, name, weight):
     return await_plabels()
 
 
-def upload_attributes(
-    dataset_id, attributes_filename, attributes_filepath, project_id
-):
+def upload_attributes(dataset_id, attributes_filepath):
     """
     This function is used in the case of Watchful application being on a
     machine different from where data enrichment is run.
@@ -354,25 +352,16 @@ def upload_attributes(
     the application logic. With this, upload_attributes() can be used for both
     local and remote Watchful application.
     """
-    # conn = _get_conn()
-    # conn.request(
-    #     "PUT",
-    #     f"/fs/default/datasets/attrs/{attributes_filename}",
-    #     open(attributes_filepath, "r"),
-    #     {"Content-Type": "text/plain"}
-    # )
-    # resp = conn.getresponse()
-    # assert(resp.status == 200 or resp.status == 201)
-    # summary = json.loads(resp.read())
-    # return summary
-
-    return api(
-        "upload_attributes",
-        id=dataset_id,
-        file=attributes_filename,
-        data=open(attributes_filepath, "rb").read(),
-        project_id=project_id,
-    )
+    conn = _get_conn()
+    with open(attributes_filepath, "r", encoding="utf-8") as attr_file:
+        conn.request(
+            "PUT",
+            f"/datasets/{dataset_id}/attributes",
+            body=attr_file,
+            headers={"Content-Type": "text/plain"},
+        )
+    resp = conn.getresponse()
+    assert resp.status == 200, f"not OK HTTP status. Was: {resp.status}"
 
 
 def load_attributes(dataset_id, attributes_filename):
@@ -456,22 +445,34 @@ def export_stream(content_type="text/csv", mode="ftc"):
     return resp
 
 
-def export_dataset(content_type="text/csv", mode="ftc"):
+def export_dataset_to(out_file, fields=None):
     """
-    Exports the original dataset via a buffered stream. For consistency with
-    `export_stream`, let the content_type of the original dataset follow that of
-    `export_stream`, that is, "text/csv" for "ftc" mode and
-    "application/jsonlines" for "ner" mode.
+    Exports the original dataset via a buffered stream to the specified
+    output file.
+    Takes header as an optional argument, for when the callee expects
+    a certain header.
+
+    :raise exception when the exported file does not match the expected header.
     """
-    conn = _get_conn()
-    content_type = urllib.parse.quote_plus(content_type)
-    mode = urllib.parse.quote_plus(mode)
-    conn.request(
-        "GET", f"/export_dataset?content-type={content_type}&mode={mode}"
-    )
-    resp = conn.getresponse()
-    assert resp.status == 200, f"Request failed with status {resp.status}."
-    return resp
+    if not fields:
+        fields = get()["field_names"]
+    n_cols = len(fields)
+    dataset_export_stream = export_stream(content_type="text/csv", mode="ftc")
+    with open(out_file, "w", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        reader = csv.reader(
+            io.TextIOWrapper(
+                dataset_export_stream, encoding="utf-8", newline=""
+            )
+        )
+        header = next(reader)
+        if header[:n_cols] != fields:
+            raise Exception(
+                f"Dataset did not match expected field names. header={header} != fields={fields}"
+            )
+        writer.writerow(fields)
+        for row in reader:
+            writer.writerow(row[:n_cols])
 
 
 def export_async():
