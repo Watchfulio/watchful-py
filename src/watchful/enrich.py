@@ -377,25 +377,26 @@ def main(args: List[str] = None, custom_enricher: Enricher = None) -> None:
             )
             sys.exit(1)
 
-    # Load attributes filepath into Watchful application.
-    # Example usage:
-    # curl -iX POST http://localhost:9001/api \
-    #   --header "Content-Type: application/json" \
-    #   --data '{"verb":"attributes","id":"9570b0b5-4a58-445f-9b51-b434caca2650",
-    #         "filepath":"/path/to/attributes_file.attrs"}'
-    # Arguments:
-    #     id: dataset id
-    #     filepath: attributes filepath
-    load_attrib_res = client.load_attributes(dataset_id, dest_attr_filename)
+    if args.is_local:
+        # Load attributes filepath into Watchful application.
+        # Example usage:
+        # curl -iX POST http://localhost:9001/api \
+        #   --header "Content-Type: application/json" \
+        #   --data '{"verb":"attributes","id":"9570b0b5-4a58-445f-9b51-b434caca2650",
+        #         "filepath":"/path/to/attributes_file.attrs"}'
+        # Arguments:
+        #     id: dataset id
+        #     filepath: attributes filepath
+        load_attrib_res = client.load_attributes(dataset_id, dest_attr_filename)
 
-    msg = (
-        f"attributes via watchful {args.wf_host}:{args.wf_port} to dataset "
-        f"id {dataset_id}."
-    )
-    if "error_msg" in load_attrib_res and load_attrib_res["error_msg"]:
-        print(f"Error ingesting {msg}")
-    else:
-        print(f"Ingested {msg}")
+        msg = (
+            f"attributes via watchful {args.wf_host}:{args.wf_port} to dataset "
+            f"id {dataset_id}."
+        )
+        if "error_msg" in load_attrib_res and load_attrib_res["error_msg"]:
+            print(f"Error ingesting {msg}")
+        else:
+            print(f"Ingested {msg}")
 
 
 if __name__ == "__main__":
