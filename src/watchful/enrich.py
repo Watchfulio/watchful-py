@@ -139,10 +139,9 @@ def main(args: List[str] = None, custom_enricher: Enricher = None) -> None:
             working_dir = os.path.join(user_home_path, "watchful", "working")
             os.makedirs(working_dir, exist_ok=True)
             args.in_file = os.path.join(working_dir, str(uuid4()))
-            dataset_export_stream = client.export_dataset()
-            with open(args.in_file, "wb") as f:
-                for line in dataset_export_stream:
-                    f.write(line)
+            client.export_dataset_to(
+                args.in_file, fields=summary["field_names"]
+            )
         else:
             print(
                 'in_file must be initially "" for enrichment to a remote '
@@ -319,9 +318,8 @@ def main(args: List[str] = None, custom_enricher: Enricher = None) -> None:
             f"enriched project {project_id}!"
         )
         sys.exit(1)
-    current_dataset_id, *_ = attributes.get_dataset_id_dir_filepath(
-        summary, args.in_file, args.is_local
-    )
+
+    current_dataset_id = client.get_dataset_id(summary)
     if dataset_id != current_dataset_id:
         print(
             f"Current dataset {current_dataset_id} is different from the "
@@ -366,9 +364,7 @@ def main(args: List[str] = None, custom_enricher: Enricher = None) -> None:
     # Upload created attributes output file to Watchful application if it is
     # remote.
     else:
-        client.upload_attributes(
-            dataset_id, dest_attr_filename, args.out_file, project_id
-        )
+        client.upload_attributes(dataset_id, args.out_file)
 
     if del_out_file:
         try:
@@ -381,25 +377,26 @@ def main(args: List[str] = None, custom_enricher: Enricher = None) -> None:
             )
             sys.exit(1)
 
-    # Load attributes filepath into Watchful application.
-    # Example usage:
-    # curl -iX POST http://localhost:9001/api \
-    #   --header "Content-Type: application/json" \
-    #   --data '{"verb":"attributes","id":"9570b0b5-4a58-445f-9b51-b434caca2650",
-    #         "filepath":"/path/to/attributes_file.attrs"}'
-    # Arguments:
-    #     id: dataset id
-    #     filepath: attributes filepath
-    load_attrib_res = client.load_attributes(dataset_id, dest_attr_filename)
+    if args.is_local:
+        # Load attributes filepath into Watchful application.
+        # Example usage:
+        # curl -iX POST http://localhost:9001/api \
+        #   --header "Content-Type: application/json" \
+        #   --data '{"verb":"attributes","id":"9570b0b5-4a58-445f-9b51-b434caca2650",
+        #         "filepath":"/path/to/attributes_file.attrs"}'
+        # Arguments:
+        #     id: dataset id
+        #     filepath: attributes filepath
+        load_attrib_res = client.load_attributes(dataset_id, dest_attr_filename)
 
-    msg = (
-        f"attributes via watchful {args.wf_host}:{args.wf_port} to dataset "
-        f"id {dataset_id}."
-    )
-    if "error_msg" in load_attrib_res and load_attrib_res["error_msg"]:
-        print(f"Error ingesting {msg}")
-    else:
-        print(f"Ingested {msg}")
+        msg = (
+            f"attributes via watchful {args.wf_host}:{args.wf_port} to dataset "
+            f"id {dataset_id}."
+        )
+        if "error_msg" in load_attrib_res and load_attrib_res["error_msg"]:
+            print(f"Error ingesting {msg}")
+        else:
+            print(f"Ingested {msg}")
 
 
 if __name__ == "__main__":
