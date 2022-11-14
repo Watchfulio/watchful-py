@@ -1,15 +1,11 @@
 """
 This script provides the functions required for interacting directly with
-Watchful client.
+Watchful client application.
 """
 ################################################################################
 
 
-# TODO:
-# - We need a better way of signalling error besides making the caller check for
-#   it in the summary. Maybe throw from api() if error_msg is set?
-
-
+import base64
 import csv
 import http.client
 import io
@@ -20,57 +16,102 @@ import subprocess
 import sys
 import time
 import urllib
+from typing import Callable, Dict, Generator, List, Optional
+from uuid import uuid4
 
 
 HOST = "localhost"
 PORT = "9002"
 
 
-def _refresh():
+def _refresh() -> None:
+    """
+    This function explicitly refreshes the imported ``watchful`` package.
+    """
+
     del sys.modules["watchful"]
     import watchful
 
     print(f"watchful version: {watchful.__version__}")
 
 
-def _get_conn():
+def _get_conn() -> http.client.HTTPConnection:
+    """
+    This function creates the HTTP connection from the global
+    ``HOST`` and ``PORT``.
+
+    :return: A ``http.client.HTTPConnection`` to ``HOST`` and ``PORT``.
+    :rtype: http.client.HTTPConnection
+    """
+
     return http.client.HTTPConnection(HOST + ":" + PORT)
 
 
-def await_port_opening(port, timeout_sec=10):
+def await_port_opening(port: int, timeout_sec: int = 10) -> None:
     """
-    Waits for the port to be open.
-    Returns true if the port was open within the timeout.
-    Used for awaiting Watchful process startup.
+    This function waits for the port to be open; it returns None if ``port`` was
+    opened within the timeout, otherwise it raises an exception. It is used for
+    awaiting Watchful process startup.
+
+    :param port: The port.
+    :type port: int
+    :param timeout_sec: The timeout in seconds, defaults to 10.
+    :type timeout_sec: int, optional
     """
+
     end = time.time_ns() + (timeout_sec * 1_000_000_000)
     while time.time_ns() < end:
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.settimeout(timeout_sec)
         res = sock.connect_ex((HOST, port))
         if res == 0:
-            return
+            return None
         time.sleep(0.001)
+
     raise Exception("Timed out waiting for Watchful to start")
 
 
-def spawn_cmd(cmd, env=None):
-    """Spawns a command and returns the PID of the spawned process"""
+def spawn_cmd(cmd: str, env: str = None) -> int:
+    """
+    This function spawns a command and returns the PID of the spawned process.
+
+    :param cmd: The command.
+    :type cmd: str
+    :param env: The environment, defaults to None.
+    :type env: str, optional
+    :return: The PID of the spawned process.
+    :rtype: int
+    """
+
     with subprocess.Popen(
         cmd + " &\n echo $!", shell=True, stdout=subprocess.PIPE, env=env
     ) as proc:
         out, _ = proc.communicate()
     pid = int(out.decode("utf-8")[:-1])
+
     return pid
 
 
-def await_summary(pred, halt_fn=lambda x: False, unchanged_timeout=60):
+def await_summary(
+    pred: Callable,
+    halt_fn: Callable = lambda x: False,
+    unchanged_timeout: int = 60,
+) -> Optional[Dict]:
     """
-    Returns the summary once predicate(summary) returns true.
-    Stops waiting once the halt function returns true, and returns None.
-    Raises an exception if the summary is unchanged for `unchanged_timeout`
-    seconds.
+    This function returns the summary once ``pred(summary)`` returns true, or
+    stops waiting once ``halt_fn`` returns true and then returns None, or raises
+    an exception if the summary is unchanged for ``unchanged_timeout`` seconds.
+
+    :param pred: The predicate function.
+    :type pred: Callable
+    :param halt_fn: The halt function, defaults to lambda x: False.
+    :type halt_fn: Callable, optional
+    :param unchanged_timeout: The timeout in seconds, defaults to 60.
+    :type unchanged_timeout: int, optional
+    :return: The dictionary of the HTTP response from :func:`get()`.
+    :rtype: Dict
     """
+
     prev_summary = None
     end = float("inf")
     while time.time_ns() < end:
@@ -91,42 +132,79 @@ def await_summary(pred, halt_fn=lambda x: False, unchanged_timeout=60):
     )
 
 
-def _assert_success(summary):
+def _assert_success(summary: Dict) -> Optional[Dict]:
+    """
+    This function raises an exception if summary contains "error_msg", otherwise
+    it returns the summary.
+
+    :param summary: The dictionary of the HTTP response from a connection
+        request.
+    :type summary: Dict
+    :return: The summary.
+    :rtype: Dict
+    """
+
     if "error_msg" in summary and summary["error_msg"]:
         verb_str = ""
         if "error_verb" in summary and summary["error_verb"]:
             verb_str = f' ({summary["error_verb"]})'
         raise Exception(f'Summary error{verb_str}: {summary["error_msg"]}')
+
     return summary
 
 
-def _read_response_summary(resp):
+def _read_response_summary(resp: http.client.HTTPResponse) -> Optional[Dict]:
+    """
+    This function raises an exception if ``resp.status`` is not 200, otherwise
+    it returns ``ret``.
+
+    :param resp: The HTTP response from a connection request.
+    :type resp: http.client.HTTPResponse
+    :return: The dictionary of ``resp``.
+    :rtype: Dict
+    """
+
     assert 200 == int(resp.status)
+
     ret = json.loads(resp.read())
     # One idea:
     # if ret["error_msg"]:
     #     raise Exception(ret["error_msg"])
     if "error_msg" in ret and ret["error_msg"]:
         print(ret["error_msg"])
+
     return ret
 
 
-def api(verb, **args):
+def api(verb: str, **args: Dict) -> Optional[Dict]:
     """
-    Convenience method for API calls; made up of a verb and some arguments.
+    This is a convenience function for API calls; made up of a verb and optional
+    keyword arguments.
+
+    :param verb: The verb for the API.
+    :type verb: str
+    :param args: Optional parameters to support the API for ``verb``.
+    :type args: Dict
+    :return: The dictionary of the HTTP response from the connection request.
+    :rtype: Dict
     """
+
     action = args  # already a dictionary
     action["verb"] = verb
+
     return api_send_action(action)
 
 
-def api_send_action(action):
+def api_send_action(action: Dict) -> Optional[Dict]:
     """
-    Convenience method used by `se_auto_evaluator.py`. Consequently, api()
-    should be refactored to reuse this function abstraction. Why? Where `action`
-    is directly available, we should not strip it for api() and reform it in
-    api().
+    This is a convenience function for API calls with an action.
+
+    :param action: The ``verb`` for the API with optional parameters.
+    :type action: Dict
+    :return: The dictionary of the HTTP response from the connection request.
+    :rtype: Dict
     """
+
     conn = _get_conn()
     conn.request(
         "POST", "/api", json.dumps(action), {"Content-Type": "application/json"}
@@ -134,29 +212,63 @@ def api_send_action(action):
     return _read_response_summary(conn.getresponse())
 
 
-def ephemeral(port="9002"):
-    """Start the backend for an interactive session without persistence."""
-    spawn_cmd(
+def ephemeral(port: str = "9002") -> None:
+    """
+    This function starts the backend using the specified ``port`` for an
+    interactive session without persistence.
+
+    :param port: The port, defaults to "9002".
+    :type port: str, optional
+    """
+
+    _ = spawn_cmd(
         f"watchful -p {port} --no-persistence >watchful_ephemeral_output.txt 2>&1"
     )
     await_port_opening(int(port))
     external(port=port)
 
 
-def external(host="localhost", port="9001"):
+def external(host: str = "localhost", port: str = "9001") -> None:
+    """
+    This function changes the global ``HOST`` abd ``PORT`` values.
+
+    :param host: The host, defaults to "localhost".
+    :type host: str, optional
+    :param port: The port, defaults to "9001".
+    :type port: str, optional
+    """
+
     global HOST, PORT
     HOST = host
     PORT = port
 
 
-def list_projects():
+def list_projects() -> Dict:
+    """
+    This function lists the available projects.
+
+    :return: The dictionary of the HTTP response from the connection request.
+    :rtype: Dict
+    """
+
     c = _get_conn()
     c.request("GET", "/projects")
     r = c.getresponse()
+
     return json.loads(r.read())
 
 
-def open_project(id_):
+def open_project(id_: str) -> bytes:
+    """
+    This function opens a project via its project id, which is the path to its
+    hints file.
+
+    :param id_: The project id.
+    :type id_: str
+    :return: The read HTTP response.
+    :rtype: bytes
+    """
+
     c = _get_conn()
     c.request(
         "POST",
@@ -165,72 +277,132 @@ def open_project(id_):
         {"Content-Type": "application/json"},
     )
     r = c.getresponse()
+
     ret = r.read()
     await_plabels()
+
     return ret
 
 
-def create_project():
+def create_project() -> bytes:
+    """
+    This function creates a new project.
+
+    :return: The read HTTP response.
+    :rtype: bytes
+    """
+
     return open_project("new")
 
 
-def get_project_id(summary):
+def get_project_id(summary: Dict) -> str:
     """
-    Get the project id from the summary. For correctness, we use the summary
-    that has been success asserted.
+    This function gets the active project id from ``summary``. For correctness,
+    we use the ``summary`` that has been success asserted via
+    ``_assert_success``.
+
+    :param summary: The dictionary of the HTTP response from a connection
+        request.
+    :type summary: Dict
+    :return: The project id.
+    :rtype: str
     """
+
     if "project_id" in summary:
         return summary["project_id"]
+
     raise Exception("No project is currently active.")
 
 
-def get_dataset_id(summary):
+def get_dataset_id(summary: Dict) -> str:
     """
-    Get the dataset id from the summary. For correctness, we use the summary
-    that has been success asserted.
+    This function gets the active dataset id from ``summary``. For correctness,
+    we use the ``summary`` that has been success asserted via
+    ``_assert_success``.
+
+    :param summary: The dictionary of the HTTP response from a connection
+        request.
+    :type summary: Dict
+    :return: The dataset id.
+    :rtype: str
     """
+
     if "datasets" in summary:
-        # `dataset_ids` should either be empty or contain one dataset id.
+        # ``dataset_ids`` should either be empty or contain one dataset id.
         dataset_ids = summary["datasets"]
         if len(dataset_ids) == 0:
             raise Exception("No dataset is currently opened.")
         dataset_id = dataset_ids[0]
         return dataset_id
+
     raise Exception("`datasets` is currently not available.")
 
 
-def get_watchful_home(summary, is_local=True):
+def get_watchful_home(summary: Dict, is_local: bool = True) -> str:
     """
-    Get Watchful home from the summary. For correctness, we use the summary that
-    has been success asserted. If Watchful home is not available and the
-    Watchful application is local, we derive Watchful home from the user home.
+    This function gets Watchful home from ``summary``. For correctness, we use
+    the summary that has been success asserted via ``_assert_success``. If
+    Watchful home is not available and the Watchful application is local, we
+    derive Watchful home from the user home.
+
+    :param summary: The dictionary of the HTTP response from a connection
+        request.
+    :type summary: Dict
+    :param is_local: The boolean indicating if the Watchful application is
+        local, defaults to True
+    :type is_local: bool, optional
+    :return: Watchful home.
+    :rtype: str
     """
+
     if "watchful_home" in summary:
         return summary["watchful_home"]
     if is_local:
         user_home = os.path.expanduser("~")
         watchful_home = os.path.join(user_home, "watchful")
         return watchful_home
+
     raise Exception("`watchful_home` is currently not available.")
 
 
-def get_datasets_dir(summary, is_local=True):
+def get_datasets_dir(summary: Dict, is_local: bool = True) -> str:
     """
-    Infer the datasets directory from the summary. For correctness, we use the
-    summary that has been success asserted.
+    This function infers the datasets directory from ``summary``. For
+    correctness, we use the summary that has been success asserted via
+    ``_assert_success``.
+
+    :param summary: The dictionary of the HTTP response from a connection
+        request.
+    :type summary: Dict
+    :param is_local: The boolean indicating if the Watchful application is
+        local, defaults to True
+    :type is_local: bool, optional
+    :return: The datasets directory.
+    :rtype: str
     """
+
     watchful_home = get_watchful_home(summary, is_local)
     datasets_dir = os.path.join(watchful_home, "datasets")
     return datasets_dir
 
 
-def get_dataset_filepath(summary, is_local=True):
+def get_dataset_filepath(summary: Dict, is_local: bool = True) -> str:
     """
-    Infer the dataset filepath from the summary. For correctness, we use the
-    summary that has been success asserted. As this function uses file
-    operations, it does not work when the Watchful application is remote, and in
-    this case returns "".
+    This function infers the datasets filepath from ``summary``. For
+    correctness, we use the summary that has been success asserted via
+    ``_assert_success``. As this function uses file operations, it does not work
+    when the Watchful application is remote, and in such case returns "".
+
+    :param summary: The dictionary of the HTTP response from a connection
+        request.
+    :type summary: Dict
+    :param is_local: The boolean indicating if the Watchful application is
+        local, defaults to True
+    :type is_local: bool, optional
+    :return: The dataset filepath.
+    :rtype: str
     """
+
     if not is_local:
         return ""
 
@@ -238,14 +410,14 @@ def get_dataset_filepath(summary, is_local=True):
     dataset_id = get_dataset_id(summary)
     dataset_ref_path = os.path.join(datasets_dir, "refs", dataset_id)
 
-    # Check that `dataset_ref_path` exists.
+    # Check that ``dataset_ref_path`` exists.
     if not os.path.isfile(dataset_ref_path):
         raise Exception(f"File {dataset_ref_path} does not exist.")
-    with open(dataset_ref_path, encoding=sys.getdefaultencoding()) as f:
+    with open(dataset_ref_path, encoding="utf-8") as f:
         dataset_ref = f.readline()
     dataset_filepath = os.path.join(datasets_dir, "raw", dataset_ref)
 
-    # Check that `dataset_filepath` exists.
+    # Check that ``dataset_filepath`` exists.
     if not os.path.isfile(dataset_filepath):
         raise Exception(f"File {dataset_filepath} does not exist.")
 
@@ -253,40 +425,103 @@ def get_dataset_filepath(summary, is_local=True):
 
 
 # def poll():
+#     pass
 
 
-def records(csv_):
+def records(csv_: str) -> Optional[Dict]:
+    """
+    This function loads the csv dataset.
+
+    :param csv_: The csv dataset.
+    :type csv_: str
+    :return: The dictionary of the HTTP response from the connection request.
+    :rtype: Dict
+    """
+
     return api("records", data=csv_, content_type="text/csv")
 
 
-def class_(class__):
+def class_(class__: str) -> Optional[Dict]:
+    """
+    This function creates a class.
+
+    :param class__: The class.
+    :type class__: str
+    :return: The dictionary of the HTTP response from the connection request.
+    :rtype: Dict
+    """
+
     return api("class", name=class__)
 
 
-def create_class(class__, class_type="ftc"):
+def create_class(class__: str, class_type: str = "ftc") -> Optional[Dict]:
+    """
+    This function creates a class.
+
+    :param class__: The class.
+    :type class__: str
+    :param class_type: The class type, it can be either "ftc" or "ner", defaults
+        to "ftc".
+    :type class_type: str, optional
+    :return: The dictionary of the HTTP response from the connection request.
+    :rtype: Dict
+    """
+
     return api("class", name=class__, class_type=class_type)
 
 
-def query_async(q, page=0):
+def query_async(q: str, page: int = 0) -> Optional[Dict]:
+    """
+    This function queries for a page. As it is asynchronous, the immediate HTTP
+    response is likely not updated yet.
+
+    :param q: The query.
+    :type q: str
+    :param page: The page, defaults to 0.
+    :type page: int, optional
+    :return: The dictionary of the HTTP response from the connection request.
+    :rtype: Dict
+    """
+
     return api("query", query=q, page=page)
 
 
-def query(q, page=0):
+def query(q: str, page: int = 0) -> Optional[Dict]:
+    """
+    This function queries for a page and returns an updated HTTP response.
+
+    :param q: The query.
+    :type q: str
+    :param page: The page, defaults to 0.
+    :type page: int, optional
+    :return: The dictionary of the HTTP response from the connection request.
+    :rtype: Dict
+    """
+
     query_async(q, page)
+
     return await_summary(
         lambda s: s["query_completed"], lambda s: s["query"] != q
     )
 
 
-def query_all(q, max_pages=0):
+def query_all(q: str, max_pages: int = 0) -> Generator[List[str], None, None]:
     """
-    Evaluates the query returning the results as opposed to the summary. Will by
-    default return all results for the query (all pages). This can be limited by
-    setting max_pages to the positive number of pages you want.
-    Each query result is a vector with a string for each field that is returned.
-    Note: TOKS, SENTS, CELLS queries only return one field and each result will
-    be wrapped in a vector of one string.
+    This function evaluates the query returning the results as opposed to the
+    summary. By default, it returns all results for the query (all pages). This
+    can be limited by setting max_pages to the positive number of pages you
+    want. Each query result is a vector with a string for each field that is
+    returned. Note that TOKS, SENTS, CELLS queries only return one field and
+    each result will be wrapped in a vector of one string.
+
+    :param q: The query.
+    :type q: str
+    :param max_pages: The maximum page, defaults to 0.
+    :type max_pages: int, optional
+    :return: The fields.
+    :rtype: Generator[List[str], None, None]
     """
+
     page = 0
     while True:
         summary = query(q, page)
@@ -297,40 +532,136 @@ def query_all(q, max_pages=0):
             break
 
 
-def base_rate(class__, rate):
+def base_rate(class__: str, rate: int) -> Optional[Dict]:
+    """
+    This function sets the base rate for a class.
+
+    :param class__: The class to set a base rate for.
+    :type class__: str
+    :param rate: The base rate for the class.
+    :type rate: int
+    :return: The dictionary of the HTTP response from the connection request.
+    :rtype: Dict
+    """
+
     return api("base_rate", label=class__, rate=rate)
 
 
-def await_plabels():
+def await_plabels() -> Optional[Dict]:
+    """
+    This function gets the updated HTTP response.
+
+    :return: The dictionary of the HTTP response from the connection request.
+    :rtype: Dict
+    """
+
     return await_summary(lambda s: s["status"] == "current")
 
 
-def hinter_async(class__, query_, weight):
+def hinter_async(class__: str, query_: str, weight: int) -> Optional[Dict]:
+    """
+    This function creates a hinter. As it is asynchronous, the immediate HTTP
+    response is likely not updated yet.
+
+    :param class__: The class for the hinter.
+    :type class__: str
+    :param query_: The query for the hinter.
+    :type query_: str
+    :param weight: The weight for the hinter.
+    :type weight: int
+    :return: The dictionary of the HTTP response from the connection request.
+    :rtype: Dict
+    """
+
     return api("hinter", label=class__, weight=weight, query=query_)
 
 
-def hinter(class__, query_, weight):
+def hinter(class__: str, query_: str, weight: int) -> Optional[Dict]:
+    """
+    This function creates a hinter and returns an updated HTTP response.
+
+    :param class__: The class for the hinter.
+    :type class__: str
+    :param query_: The query for the hinter.
+    :type query_: str
+    :param weight: The weight for the hinter.
+    :type weight: int
+    :return: The dictionary of the HTTP response from the connection request.
+    :rtype: Dict
+    """
+
     _assert_success(hinter_async(class__, query_, weight))
     return await_plabels()
 
 
-def delete(id_):
+def delete(id_: int) -> Optional[Dict]:
+    """
+    This function deletes a hinter.
+
+    :param id_: The hinter id to delete.
+    :type id_: int
+    :return: The dictionary of the HTTP response from the connection request.
+    :rtype: Dict
+    """
+
     return api("delete", id=id_)
 
 
-def delete_class(class__):
+def delete_class(class__: str) -> Optional[Dict]:
+    """
+    This function deletes a class.
+
+    :param class__: The class to delete.
+    :type class__: str
+    :return: The dictionary of the HTTP response from the connection request.
+    :rtype: Dict
+    """
+
     return api("delete", class_name=class__)
 
 
-def get():
+def get() -> Optional[Dict]:
+    """
+    This function gets the current status of the Watchful application,
+    containing information such as your currently active project, dataset
+    examples (candidates) and classes, hinters created, hand labels and label
+    distribution, confidences and error rate, recall and precision and many
+    more.
+
+    :return: The dictionary of the HTTP response from the connection request.
+    :rtype: Dict
+    """
+
     return api("nop")
 
 
-def title(title_):
+def title(title_: str) -> Optional[Dict]:
+    """
+    This function gives a title to a newly created project.
+
+    :param title_: The title for the project.
+    :type title_: str
+    :return: The dictionary of the HTTP response from the connection request.
+    :rtype: Dict
+    """
+
     return api("title", title=title_)
 
 
-def external_hinter(class__, name, weight):
+def external_hinter(class__: str, name: str, weight: int) -> Optional[Dict]:
+    """
+    This function creates an external hinter.
+
+    :param class__: The class for the hinter.
+    :type class__: str
+    :param name: The name for the hinter.
+    :type name: str
+    :param weight: The weight for the hinter.
+    :type weight: int
+    :return: The dictionary of the HTTP response from the connection request.
+    :rtype: Dict
+    """
+
     _assert_success(
         api(
             "hinter",
@@ -340,54 +671,85 @@ def external_hinter(class__, name, weight):
             weight=weight,
         )
     )
+
     return await_plabels()
 
 
-def upload_attributes(dataset_id, attributes_filepath):
+def upload_attributes(
+    dataset_id: str,
+    attributes_filepath: str,
+) -> Optional[Dict]:
     """
-    This function is used in the case of Watchful application being on a
-    machine different from where data enrichment is run.
-    Note: Eventually upload_attributes() should upload the attributes to the
-    Watchful application via the api and saves it to a filepath according to
-    the application logic. With this, upload_attributes() can be used for both
-    local and remote Watchful application.
+    This function uploads the attributes for the ``dataset_id`` to the remote
+    Watchful application, where the Watchful application then saves it to a
+    filepath according to its stable application logic.
+
+    :param dataset_id: The dataset id.
+    :type dataset_id: str
+    :param attributes_filepath: The attributes filepath.
+    :type attributes_filepath: str
+    :return: The dictionary of the HTTP response from the connection request.
+    :rtype: Dict
     """
     conn = _get_conn()
-    with open(attributes_filepath, "r", encoding="utf-8") as attr_file:
+    with open(attributes_filepath, encoding="utf-8") as attributes_file:
         conn.request(
             "PUT",
             f"/datasets/{dataset_id}/attributes",
-            body=attr_file,
-            headers={"Content-Type": "text/plain"},
+            attributes_file,
+            {"Content-Type": "text/plain"},
         )
     resp = conn.getresponse()
     assert resp.status == 200, f"not OK HTTP status. Was: {resp.status}"
     return _assert_success(_read_response_summary(resp))
 
 
-def load_attributes(dataset_id, attributes_filename):
+def load_attributes(
+    dataset_id: str,
+    attributes_filename: str,
+) -> Optional[Dict]:
     """
     This function is used in the case of Watchful application being on the same
-    machine as the data enrichment. Loads attributes into the local Watchful
-    using dataset_id:string and attributes_filename:string.
+    machine as the data enrichment.
+
+    :param dataset_id: The dataset id.
+    :type dataset_id: str
+    :param attributes_filename: The attributes filename.
+    :type attributes_filename: str
+    :return: The dictionary of the HTTP response from the connection request.
+    :rtype: Dict
     """
+
     return api("attributes", id=dataset_id, file=attributes_filename)
 
 
-def _dump(offset):
+def _dump(offset: int) -> Optional[Dict]:
+    """
+    This function returns a chunk of candidates in "hint API order".
+
+    :param offset: The offset chunk.
+    :type offset: int
+    :return: The dictionary of the HTTP response from the connection request.
+    :rtype: Dict
+    """
+
     return api("dump", offset=offset)
 
 
-def dump():
+def dump() -> Generator[List[str], None, None]:
     """
-    A generator that returns all the candidates in "hint API order".
+    This function returns all the candidates in "hint API order".
+
+    :return: The generator of all the candidates.
+    :rtype: Generator[List[str], None, None]
     """
+
     n_cands = get()["n_candidates"]
     offset = 0
     chunk = []
     while offset < n_cands:
         summary = _dump(offset)
-        # TODO: handle errors
+        # TODO: Add error handling.
         chunk = summary["candidates"]
         offset += len(chunk)
         i = 0
@@ -396,43 +758,98 @@ def dump():
             i += 1
 
 
-def dump_dicts():
+def dump_dicts() -> Generator[Dict[str, str], None, None]:
+    """
+    This function returns all the candidates in "hint API order", together with
+    the column names for all values.
+
+    :return: The generator of all the candidates, each as a dictionary of named
+        values.
+    :rtype: Generator[Dict[str, str], None, None]
+    """
+
     field_names = get()["field_names"]
     for c in dump():
         yield dict(zip(field_names, c))
 
 
-def hint(name, offset, values):
+def hint(name: str, offset: int, values: List[bool]) -> Optional[Dict]:
     """
+    This function adds the hints for an external hinter.
+
+    :param name: The hinter name.
+    :type name: str
+    :param offset: The offset.
+    :type offset: int
+    :param values: The hints.
+    :type values: List[bool]
+    :return: The dictionary of the HTTP response from the connection request.
+    :rtype: Dict
+
     TODO: Come up with a better streaming Python API here.
     """
+
     values = list(map(lambda x: x and 1 or 0, values))
+
     return _assert_success(api("hint", name=name, offset=offset, values=values))
 
 
-def apply_hints(name):
+def apply_hints(name: str) -> Optional[Dict]:
+    """
+    This function applies the hints for an external hinter.
+
+    :param name: The hinter name.
+    :type name: str
+    :return: The dictionary of the HTTP response from the connection request.
+    :rtype: Dict
+    """
+
     _assert_success(api("apply_hints", name=name))
+
     return await_plabels()
 
 
-def hint_all(name, values):
+def hint_all(name: str, values: List[bool]) -> Optional[Dict]:
+    """
+    This function applies the hints for an external hinter.
+
+    :param name: The hinter name.
+    :type name: str
+    :param values: The hints.
+    :type values: List[bool]
+    :return: The dictionary of the HTTP response from the connection request.
+    :rtype: Dict
+    """
+
     hint(name, 0, values)
+
     return apply_hints(name)
 
 
-def export_stream(content_type="text/csv", mode="ftc"):
+def export_stream(
+    content_type: str = "text/csv",
+    mode: str = "ftc",
+) -> http.client.HTTPResponse:
     """
-    Begins the export using the export_stream call.  The result is not
-    JSON, but is data to be processed directly.
+    This function begins the export using the export_stream call. The result is
+    not JSON, but is data to be processed directly.
 
     For FTC mode, content_type must be text/csv and mode must be ftc.
-
     For NER mode, content_type must be application/jsonlines and mode
     must be ner.
 
-    On success, returns the HTTPResponse object from which you can
-    read the data.
+    On success, it returns the http.client.HTTPResponse object from which you
+    can read the data.
+
+    :param content_type: The content type of the export, defaults to "text/csv".
+    :type content_type: str, optional
+    :param mode: The mode of the export, it can be either "ftc" or "ner",
+        defaults to "ftc".
+    :type mode: str, optional
+    :return: The HTTP response from the connection request.
+    :rtype: http.client.HTTPResponse
     """
+
     conn = _get_conn()
     conn.request(
         "GET",
@@ -442,23 +859,30 @@ def export_stream(content_type="text/csv", mode="ftc"):
         + urllib.parse.quote_plus(mode),
     )
     resp = conn.getresponse()
-    assert 200 == int(resp.status)
+    assert 200 == int(resp.status), f"Request failed with status {resp.status}."
     return resp
 
 
-def export_dataset_to(out_file, fields=None):
+def export_dataset_to_path(out_file: str, fields: List[str] = None) -> None:
     """
-    Exports the original dataset via a buffered stream to the specified
-    output file.
-    Takes header as an optional argument, for when the callee expects
-    a certain header.
+    This function exports the original dataset via a buffered stream to the
+    specified output file path. It takes ``fields`` as an optional argument for
+    the header (column names), for the case where the callee expects to use
+    specific columns; otherwise it uses the column names returned by the
+    Watchful application. An exception is raised when the dataset's column names
+    do not match the user's expected column names.
 
-    :raise exception when the exported file does not match the expected header.
+    :param out_file: The file path to export the original dataset to.
+    :type out_file: str
+    :param fields: The list of column names to use for the dataset export.
+    :type fields: List, optional
     """
+
     if not fields:
         fields = get()["field_names"]
     n_cols = len(fields)
-    dataset_export_stream = export_stream(content_type="text/csv", mode="ftc")
+
+    dataset_export_stream = export_stream()
     with open(out_file, "w", encoding="utf-8") as f:
         writer = csv.writer(f)
         reader = csv.reader(
@@ -469,36 +893,78 @@ def export_dataset_to(out_file, fields=None):
         header = next(reader)
         if header[:n_cols] != fields:
             raise Exception(
-                f"Dataset did not match expected field names. header={header} != fields={fields}"
+                f"Dataset's column names {header} did not match the expected "
+                f"column names {fields}."
             )
         writer.writerow(fields)
         for row in reader:
             writer.writerow(row[:n_cols])
 
 
-def export_async():
+def export_async() -> Optional[Dict]:
+    """
+    This function exports the dataset. As it is asynchronous, the immediate HTTP
+    response is likely not updated yet.
+
+    :return: The dictionary of the HTTP response from the connection request.
+    :rtype: Dict
+    """
+
     return api("export", query="", content_type="text/csv")
 
 
-def export():
+def export() -> Optional[Dict]:
+    """
+    This function exports the dataset and returns an updated HTTP response.
+
+    :return: The dictionary of the HTTP response from the connection request.
+    :rtype: Dict
+    """
+
     n_exports = len(get()["exports"])
     export_async()
+
     return await_summary(lambda s: len(s["exports"]) == n_exports + 1)
 
 
-def export_preview(mode="ftc"):
+def export_preview(mode: str = "ftc") -> Optional[Dict]:
     """
-    Returns a preview of the export on summary key 'export_preview'
-    The mode parameter can be "ftc" or "ner".
+    Returns a preview of the export.
+
+    :param mode: The mode of the export preview, it can be either "ftc" or
+        "ner", defaults to "ftc".
+    :type mode: str, optional
+    :return: The dictionary of the HTTP response from the connection request.
+    :rtype: Dict
     """
+
     return api("export_preview", mode=mode)
 
 
-def create_dataset(csv_bytes, columns, filename="none", has_header=True):
+def create_dataset(
+    csv_bytes: bytes,
+    columns: List[str],
+    filename: str = "none",
+    has_header: bool = True,
+) -> str:
     """
-    TODO: Add error handling
+    This function loads the specified columns of a csv dataset and returns the
+    dataset id.
+
+    :param csv_bytes: The csv dataset bytes.
+    :type csv_bytes: bytes
+    :param columns: The list of column names to use.
+    :type columns: List[str]
+    :param filename: The csv dataset filename, defaults to "none".
+    :type filename: str, optional
+    :param has_header: The boolean indicating if the csv dataset has a header,
+        defaults to True.
+    :type has_header: bool, optional
+    :return: The dictionary of the HTTP response from the connection request.
+    :rtype: Dict
+
+    TODO: Add error handling.
     """
-    from uuid import uuid4
 
     id_ = str(uuid4())
     conn = _get_conn()
@@ -509,6 +975,7 @@ def create_dataset(csv_bytes, columns, filename="none", has_header=True):
         {"Content-Type": "text/csv"},
     )
     _ = _read_response_summary(conn.getresponse())
+
     params = json.dumps({"filename": filename, "has_header": has_header})
     conn.request(
         "POST",
@@ -517,11 +984,22 @@ def create_dataset(csv_bytes, columns, filename="none", has_header=True):
         {"Content-Type": "application/json"},
     )
     dataset_id = _read_response_summary(conn.getresponse())["id"]
+
     api("dataset_add", id=dataset_id, columns=columns)
+
     return dataset_id
 
 
-def label_single(row):
+def label_single(row: List[str]) -> List[str]:
+    """
+    This function labels a candidate row.
+
+    :param row: The candidate row.
+    :type row: List[str]
+    :return: The plabels for the candidate row.
+    :rtype: List[str]
+    """
+
     c = _get_conn()
     sio = io.StringIO()
     w = csv.writer(sio)
@@ -537,29 +1015,59 @@ def label_single(row):
     if len(rdr_list) == 2:
         fields = get()["field_names"]
         assert (
-            fields == rdr_list[0][0 : len(fields)]
+            fields == rdr_list[0][: len(fields)]
         ), "server prepended the header to the labeled row"
     else:
         assert len(rdr_list) == 1, "server returned a single row"
     return rdr_list[-1]
 
 
-def config_set(key, value):
+def config_set(key: str, value: str) -> Optional[Dict]:
+    """
+    This function sets one app instance configuration parameter using a key and
+    value pair.
+
+    :param key: The parameter name.
+    :type key: str
+    :param value: The parameter value.
+    :type value: str
+    :return: The dictionary of the HTTP response from the connection request.
+    :rtype: Dict
+    """
+
     conn = _get_conn()
     params = json.dumps({"verb": "set", "key": key, "value": value})
     conn.request(
         "POST", "/config", params, {"Content-Type": "application/json"}
     )
+
     return _read_response_summary(conn.getresponse())
 
 
-def config():
+def config() -> Optional[Dict]:
+    """
+    This function retrieves the app instance configuration parameters
+    ``remote``, ``username``, ``role`` and ``authorization`` and their values.
+
+    :return: A dictionary of key value pairs
+    :rtype: dict
+    """
+
     conn = _get_conn()
     conn.request("GET", "/config", None, {"Content-Type": "application/json"})
+
     return _read_response_summary(conn.getresponse())
 
 
-def print_candidates(summary=None):
+def print_candidates(summary: Optional[Dict] = None) -> None:
+    """
+    This function retrieves and prints the column names and all the candidates.
+
+    :param summary: The dictionary of the HTTP response from a connection
+        request, defaults to None.
+    :type summary: Dict, optional
+    """
+
     if summary is None:
         summary = get()
     print(
@@ -570,7 +1078,19 @@ def print_candidates(summary=None):
     )
 
 
-def candidate_dicts(summary=None):
+def candidate_dicts(summary: Optional[Dict] = None) -> List[Dict[str, str]]:
+    """
+    This function retrieves and returns all the candidates, together with the
+    column names for all values.
+
+    :param summary: The dictionary of the HTTP response from a connection
+        request, defaults to None.
+    :type summary: Dict, optional
+    :return: The list of all the candidates, each as a dictionary of named
+        values.
+    :rtype: List[Dict[str, str]]
+    """
+
     if summary is None:
         summary = get()
     return list(
@@ -581,11 +1101,14 @@ def candidate_dicts(summary=None):
     )
 
 
-def exit_backend():
+def exit_backend() -> None:
     """
-    Note the API call will usually fail because the backend exits before
-    returning an HTTP response so we suppress the error.
+    This function exits the backend. Note that the API call will usually fail
+    because the backend exits before returning a HTTP response so we suppress
+    the error. This is an old API function wrapper and will not be applicable to
+    the dockerized Watchful application instances.
     """
+
     try:
         api("exit")
     # We allowing passing this error as it is known.
@@ -593,14 +1116,24 @@ def exit_backend():
         pass
 
 
-### Hub API
+## Hub API
 
 
-def hub_api(verb, token, **args):
+def hub_api(verb: str, token: str, **args: Dict) -> Optional[Dict]:
     """
-    Convenience method for collaboration API calls.  Makes a hub
-    API request of the backend.
+    This is a convenience function for collaboration API calls with Watchful;
+    made up of a verb, a token and optional keyword arguments.
+
+    :param verb: The verb for the hub API.
+    :type verb: str
+    :param verb: The user's auth token.
+    :type token: str
+    :param args: Optional parameters to support the hub API for ``verb``.
+    :type args: Dict
+    :return: The dictionary of the HTTP response from the connection request.
+    :rtype: Dict
     """
+
     headers = {"Content-Type": "application/json"}
     headers.update({"Authorization": "Bearer " + token})
     action = args  # already a dictionary
@@ -610,8 +1143,17 @@ def hub_api(verb, token, **args):
     return _assert_success(_read_response_summary(conn.getresponse()))
 
 
-def login(email, password):
-    import base64
+def login(email: str, password: str) -> Optional[Dict]:
+    """
+    This function performs login with the email and password with Watchful hub.
+
+    :param email: The user's email.
+    :type email: str
+    :param password: The user's password.
+    :type password: str
+    :return: The dictionary of the HTTP response from the connection request.
+    :rtype: Dict
+    """
 
     headers = {"Content-Type": "application/json"}
     credentials = base64.b64encode(str.encode(f"{email}:{password}")).decode(
@@ -623,25 +1165,79 @@ def login(email, password):
     return _assert_success(_read_response_summary(conn.getresponse()))
 
 
-def publish(token=None):
+def publish(token: Optional[str] = None) -> Optional[Dict]:
+    """
+    This function performs publish with Watchful hub.
+
+    :param token: The user's auth token, defaults to None.
+    :type token: str, optional
+    :return: The dictionary of the HTTP response from the connection request.
+    :rtype: Dict
+    """
+
     return hub_api("publish", token)
 
 
-def fetch(token=None):
+def fetch(token: Optional[str] = None) -> Optional[Dict]:
+    """
+    This function performs fetch with Watchful hub.
+
+    :param token: The user's auth token, defaults to None.
+    :type token: str, optional
+    :return: The dictionary of the HTTP response from the connection request.
+    :rtype: Dict
+    """
+
     return hub_api("fetch", token)
 
 
-def pull(token=None):
+def pull(token: Optional[str] = None) -> Optional[Dict]:
+    """
+    This function performs pull with Watchful hub.
+
+    :param token: The user's auth token, defaults to None.
+    :type token: str, optional
+    :return: The dictionary of the HTTP response from the connection request.
+    :rtype: Dict
+    """
+
     return hub_api("pull", token)
 
 
-def push(token=None):
+def push(token: Optional[str] = None) -> Optional[Dict]:
+    """
+    This function performs push with Watchful hub.
+
+    :param token: The user's auth token, defaults to None.
+    :type token: str, optional
+    :return: The dictionary of the HTTP response from the connection request.
+    :rtype: Dict
+    """
+
     return hub_api("push", token)
 
 
-def peek(token=None):
+def peek(token: Optional[str] = None) -> Optional[Dict]:
+    """
+    This function performs peek with Watchful hub.
+
+    :param token: The user's auth token, defaults to None.
+    :type token: str, optional
+    :return: The dictionary of the HTTP response from the connection request.
+    :rtype: Dict
+    """
+
     return hub_api("peek", token)
 
 
-def whoami(token=None):
+def whoami(token: Optional[str] = None) -> Optional[Dict]:
+    """
+    This function performs whoami with Watchful hub.
+
+    :param token: The user's auth token, defaults to None.
+    :type token: str, optional
+    :return: The dictionary of the HTTP response from the connection request.
+    :rtype: Dict
+    """
+
     return hub_api("whoami", token)

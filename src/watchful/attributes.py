@@ -5,46 +5,68 @@ This script provides the functions required for data enrichment.
 
 
 import csv
+import io
 import json
 import numbers
 import os
 import pprint
 import re
-import sys
-from typing import Callable, Dict, List, Optional, Tuple, Union
+from heapq import merge
 from multiprocessing import Pool
+from typing import Callable, Dict, List, Optional, Tuple, Union
 import psutil
 from watchful import client
 
+
+# Utility printer.
 pprint._sorted = lambda x: x
 pprint = pprint.PrettyPrinter(indent=4).pprint
 
 
-# Generally, you should not need to edit these variables directly.
+# Constants for use in the data enrichment. Generally, they should not be edited
+# directly.
 IS_MULTIPROC = False
 MULTIPROC_CHUNKSIZE = None
 ENRICHMENT_ARGS = None
 ATTR_WRITER = None
 EnrichedCell = List[
-    Tuple[Union[List[Tuple[int]], Dict[str, List[str]], Optional[str]]]
+    Tuple[
+        Union[
+            List[Tuple[int]],
+            Dict[str, List[str]],
+            Optional[str],
+        ]
+    ]
 ]
 
-# Constants for encoding spans into compact strings
-BASE = 64
-COMP_LEN = 8
 
-# '0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmno'
-numerals = dict(
+# Constants for encoding spans into compact strings. Do not edit them.
+BASE = 64
+COMPRESSED_LEN = 8
+
+# Chars: "0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmno"
+NUMERALS = dict(
     map(lambda ic: (ic[0], chr(ic[1])), enumerate(range(48, 48 + BASE)))
 )
 
-# "#$%&'()*"
-compressed = dict(
-    map(lambda ic: (ic[0], chr(ic[1])), enumerate(range(35, 35 + COMP_LEN)))
+# Chars: "#$%&'()*"
+COMPRESSED = dict(
+    map(
+        lambda ic: (ic[0], chr(ic[1])),
+        enumerate(range(35, 35 + COMPRESSED_LEN)),
+    )
 )
 
 
 def set_multiprocessing(is_multiproc: bool) -> None:
+    """
+    This function sets whether multiprocessing is used for the data enrichment.
+    This is still in internal alpha mode and is not expected to be used by user.
+
+    :param is_multiproc: The multiprocessing flag.
+    :type is_multiproc: bool
+    """
+
     global IS_MULTIPROC
     global MULTIPROC_CHUNKSIZE
     if is_multiproc and not IS_MULTIPROC:
@@ -56,6 +78,15 @@ def set_multiprocessing(is_multiproc: bool) -> None:
 
 
 def set_multiproc_chunksize(multiproc_chunksize: int) -> None:
+    """
+    This function sets the multiprocessing chunk size for the data enrichment,
+    if multiprocessing is used. This is still in internal alpha mode and is not
+    expected to be used by user.
+
+    :param multiproc_chunksize: The multiprocessing chunk size, at least 1.
+    :type multiproc_chunksize: int
+    """
+
     assert multiproc_chunksize >= 1
     if IS_MULTIPROC:
         global MULTIPROC_CHUNKSIZE
@@ -63,54 +94,90 @@ def set_multiproc_chunksize(multiproc_chunksize: int) -> None:
 
 
 def print_multiproc_params() -> None:
+    """
+    This function prints the multiprocessing flag and the multiprocessing chunk
+    size for the data enrichment. This is still in internal alpha mode and is
+    not expected to be used by user.
+    """
+
     print(
-        f"Multiprocessing: {IS_MULTIPROC}, "
-        f"Multiprocessing chunksize: {MULTIPROC_CHUNKSIZE}"
+        f"multiprocessing: {IS_MULTIPROC}, "
+        f"multiprocessing chunksize: {MULTIPROC_CHUNKSIZE}"
     )
 
 
-def base64(num):
+def base64(num: int) -> str:
+    """
+    This function takes in an integer value and returns its encoded string
+    value.
+
+    :param num: The integer value.
+    :type num: int
+    :return: The encoded string value.
+    :rtype: str
+    """
+
     if num == 0:
-        return numerals[0]
+        return NUMERALS[0]
 
     ret = ""
     while num > 0:
-        ret += numerals[num % BASE]
+        ret += NUMERALS[num % BASE]
         num = num // BASE
+
     return ret[::-1]
 
 
-def base64str(coll):
+def base64str(list_of_integers: List[int]) -> str:
     """
-    Takes a collection of numbers and returns a collection with strings
-    representing those numbers in base64.
+    This function takes in a list of integers and returns its encoded string
+    value with substrings representing those integers in base64.
 
     Additional compression is done by concatenating consecutive base64 strings
     of the same length. This compressed encoding is detected by inspecting the
-    first character in the ASCII range 35 inclusive to 42 inclusive. The rest of
-    the string should be partitioned into their own strings with length
-    ascii_code(s[0]) - 34.
+    first character s[0] in the ASCII range 35 inclusive to 42 inclusive. The
+    rest of the string s[1:] should be partitioned into its own strings with
+    length ascii_code(s[0]) - 34 each.
 
-    For example:
-    * String: "#1234" represents "1,2,3,4"
-    * String: "$1234" represents "12,34"
-    * String: "&1234" represents "1234", (which is never compressed since the
-    value is smaller than the compressed)
-    (compression will not be done for a base64 encoded number if it is preceded
-    or suceeded by a base64 encoded number of a different length)
+    Examples:
+    "#1234" represents "1,2,3,4"
+    "$1234" represents "12,34"
+    "&1234" represents "1234" (which is never compressed since the original
+    value is shorter than the compressed value)
 
-    Here are the ascii codes for the prefixes in the examples above:
-    * "#" => 35
-    * "$" => 36
-    * "&" => 38
-    The range 35 inclusive to 42 inclusive was chosen because it contains
+    The ASCII codes for the character prefixes in the examples are:
+    "#" => 35
+    "$" => 36
+    "&" => 38
+
+    Compression will not be done for a base64 encoded integer if it is preceded
+    or suceeded by a base64 encoded integer of a different length.
+
+    The range 35 inclusive to 42 inclusive is chosen because it contains
     characters that do not need to be escaped in JSON, nor does the range
-    contain comma (','), which is used as a delimiter to concat all of the
+    contain comma (",") as it is used as a delimiter to concatenate all of the
     strings.
+
+    :param list_of_integers: The list of integers.
+    :type list_of_integers: List[int]
+    :return: The encoded string value.
+    :rtype: str
     """
 
     ret = []
     buf = []
+
+    def flush_buf():
+        buf_len = len(buf)
+        if buf_len == 1:
+            ret.append(buf[0])
+        elif buf_len > 1:
+            compress_idx = len(buf[0]) - 1
+            if compress_idx < COMPRESSED_LEN:  # compression limit
+                ret.append(f'{COMPRESSED[compress_idx]}{"".join(buf)}')
+            else:
+                for x in buf:
+                    ret.append(x)
 
     def push_buf(buf, s):
         if len(buf) == 0 or len(s) == len(buf[0]):
@@ -120,29 +187,23 @@ def base64str(coll):
             buf = push_buf([], s)
         return buf
 
-    def flush_buf():
-        buf_len = len(buf)
-        if buf_len == 1:
-            ret.append(buf[0])
-        elif buf_len > 1:
-            compress_idx = len(buf[0]) - 1
-            if compress_idx < len(compressed):  # compressed limit
-                ret.append(compressed[compress_idx] + "".join(buf))
-            else:
-                for x in buf:
-                    ret.append(x)
-
-    for x in coll:
+    for x in list_of_integers:
         buf = push_buf(buf, base64(x))
     flush_buf()
+
     return ",".join(ret)
 
 
-def contig_spans(spans):
+def contig_spans(spans: List[Tuple[int, int]]) -> List[int]:
     """
-    Decode spans to contig_spans/2 with
-    [gap_len,span_len,...,gap_len_N,span_len_N].
-    Takes a list of (start, end).
+    This function decodes a list of spans, i.e.
+    [(start_1, end,_1), ..., (start_N, end_N)] to a list of contiguous spans,
+    i.e. [gap_len_1, span_len_1, ..., gap_len_N, span_len_N].
+
+    :param spans: The list of spans.
+    :type spans: List[Tuple[int, int]]
+    :return: The list of contiguous spans.
+    :rtype: List[int]
     """
 
     contig = []
@@ -151,35 +212,53 @@ def contig_spans(spans):
         contig.append(a - offset)
         contig.append(b - a)
         offset = b
+
     return contig
 
 
-def writer(out, n_rows, n_cols):
+def writer(output: io.TextIOWrapper, n_rows: int, n_cols: int) -> Callable:
     """
-    Takes the output file and the number of rows & columns of the original
-    dataset. Returns a write function that takes all of the attributes for a
-    cell in the original dataset, where a cell is a single row and column pair.
+    This function takes in the output file object and the number of rows and
+    columns of the dataset. It returns a write function that takes in all of the
+    attributes for a cell in the dataset, where a cell is located on a row and a
+    column pair.
 
-    The cells attributes should be in this shape:
-    [(spans:Vec<(int,int)>, attr_vals:Map<String,Vec<Any>>, name:Option<String>)
-    ..
+    The cells' attributes should be in this shape (note that the following is in
+    Rust idiom):
+    [
+      (
+        spans: Vec<(int, int)>,
+        attr_vals: Map<String, Vec<Any>>,
+        name: Option<String>
+      ),
+      ..
     ]
-    * `spans` is a sorted vector of span [start, end) in the cell.
-    * `attr_vals` is a map from attribute name to values for the `spans`. None
+    ``spans`` is a sorted vector of span (start, end) in the cell.
+    ``attr_vals`` is a map from attribute name to values for the ``spans``. None
     means that the attribute has no value for that token defined by its span.
-    * `name` is an optional parameter which can be used to give a name to the
+    ``name`` is an optional parameter which can be used to give a name to the
     spans, where the attribute value of that name is the content of the spans
-    themselves. Examples of this is: sentences, noun_chunks, tokens or
+    themselves. Examples of this are sentences, noun_chunks, tokens or
     collage_names.
+
+    :param output: The output file for all the attributes of a dataset.
+    :type output: io.TextIOWrapper
+    :param n_rows: The number of rows of the original dataset.
+    :type n_rows: int
+    :param n_cols: The number of columns of the original dataset.
+    :type n_cols: int
+    :return: The function that takes in all of the attributes for a cell in the
+        dataset and writes an encoded representation for them onto output.
+    :rtype: Callable
     """
 
-    # Write attribute and value mappings
+    # Dictionaries for writing the attribute and value mappings.
     attrs = {}
     values = {}
 
     def write_jsonl(obj):
-        json.dump(obj, out, separators=(",", ":"))
-        out.write("\n")
+        json.dump(obj, output, separators=(",", ":"))
+        output.write("\n")
 
     def write(cell_data):
         new_attrs = []
@@ -188,7 +267,7 @@ def writer(out, n_rows, n_cols):
 
         # For each span data tuple for the cell with the span and attribute
         # values.
-        # for those span, do:
+        # For those spans, do:
         for span_data in cell_data:
             span = span_data[0]
             attr_vals = span_data[1]
@@ -215,7 +294,7 @@ def writer(out, n_rows, n_cols):
                             new_values[attr] = []
                         new_values[attr].append(val)
 
-            # Create the vector for the current cell
+            # Create the vector for the current cell.
             span_val = []
             if name is not None:
                 span_val.append(name)
@@ -233,7 +312,7 @@ def writer(out, n_rows, n_cols):
             cell.append(base64str(contig_spans(span)))
             cell.append(span_val)
 
-        # Output the lines (attributes, values and the cell itself)
+        # Output the lines (attributes, values and the cell value itself).
         if new_attrs:
             write_jsonl(["@"] + new_attrs)
         if new_values:
@@ -241,17 +320,25 @@ def writer(out, n_rows, n_cols):
                 write_jsonl(["$", k] + vals)
         write_jsonl(cell)
 
-    # Write the header and return the write function to be called by users
+    # Write the header once and return the write function to be called by users.
     write_jsonl({"version": "0.3", "rows": n_rows, "cols": n_cols})
     return write
 
 
-def spacy_atterize(doc):
+def spacy_atterize(
+    doc,  # spacy.tokens.doc.Doc (remove type hint to reduce load time)
+) -> EnrichedCell:
     """
-    Extracts attributes from a SpaCy document. Attributes are associated to
-    substrings, being tokens, entities, sentences or noun chunks. Every
-    Substring is identified by its character start index and character end
+    This function creates an enriched cell from the cell inference derived by
+    SpaCy NLP. It extracts attributes from a SpaCy document. Attributes are
+    associated to substrings, being tokens, entities, sentences or noun chunks.
+    Every Substring is identified by its character start index and character end
     index.
+
+    :param doc: Cell inference.
+    :type doc: spacy.tokens.doc.Doc
+    :return: The enriched cell.
+    :rtype: EnrichedCell
     """
 
     # Return value
@@ -374,7 +461,26 @@ def spacy_atterize(doc):
     return cell
 
 
-def spacy_atterize_fn(cell, spacy_atterize_, nlp):
+def spacy_atterize_fn(
+    cell: str,
+    spacy_atterize_: Callable,
+    nlp: Callable,
+) -> EnrichedCell:
+    """
+    This function creates an enriched cell from the original cell using the
+    SpaCy NLP enrichment objects.
+
+    :param cell: The original cell.
+    :type cell: str
+    :param spacy_atterize_: The enrichment function that creates an enriched
+        cell from the cell inference derived by SpaCy NLP.
+    :type spacy_atterize_: Callable
+    :param nlp: A SpaCy NLP enrichment object.
+    :type nlp: Callable
+    :return: The enriched cell.
+    :rtype: EnrichedCell
+    """
+
     # Adding spacytextblob, cannot do it in load_spacy because of
     # our multiprocessing code. Adding a pipe to SpaCy is idempotent.
     from spacytextblob.spacytextblob import (  # pylint: disable=unused-import
@@ -386,16 +492,38 @@ def spacy_atterize_fn(cell, spacy_atterize_, nlp):
     return spacy_atterize_(nlp(cell))
 
 
-def load_spacy():
+def load_spacy() -> Tuple:
+    """
+    This function creates and returns the SpaCy NLP objects for data enrichment.
+
+    :return: The tuple of SpaCy NLP objects.
+    :rtype: Tuple
+    """
+
     import spacy
 
     # nlp = spacy.load("en_core_web_sm", exclude=["parser"])
     nlp = spacy.load("en_core_web_sm")
     nlp.enable_pipe("senter")
-    return nlp
+
+    return (nlp,)
 
 
-def flair_atterize(sent):
+def flair_atterize(
+    sent,  # flair.data.Sentence (remove type hint to reduce load time)
+) -> EnrichedCell:
+    """
+    This function creates an enriched cell from the cell inference derived by
+    Flair NLP. It extracts attributes from a Flair paragraph. Attributes are
+    associated to substrings, being tokens, entities, sentences or noun chunks.
+    Every Substring is identified by its character start index and character end
+    index.
+
+    :param sent: Cell inference.
+    :type sent: flair.data.Sentence
+    :return: The enriched cell.
+    :rtype: EnrichedCell
+    """
 
     enriched_cell = []
 
@@ -413,77 +541,128 @@ def flair_atterize(sent):
     return enriched_cell
 
 
-def flair_atterize_fn(cell, flair_atterize_, tagger_pred, sent_fn):
+def flair_atterize_fn(
+    cell: str,
+    flair_atterize_: Callable,
+    tagger_pred: Callable,
+    sent_fn: Callable,
+) -> EnrichedCell:
+    """
+    This function creates an enriched cell from the original cell using the
+    Flair NLP enrichment objects.
+
+    :param cell: The original cell.
+    :type cell: str
+    :param flair_atterize_: The enrichment function that creates an enriched
+        cell from the cell inference derived by Flair NLP.
+    :type flair_atterize_: Callable
+    :param tagger_pred: A Flair NLP enrichment object.
+    :type tagger_pred: Callable
+    :param sent_fn: A Flair NLP enrichment object.
+    :type sent_fn: Callable
+    :return: The enriched cell.
+    :rtype: EnrichedCell
+    """
+
     sent = sent_fn(cell)
     tagger_pred(sent)
+
     return flair_atterize_(sent)
 
 
-def load_flair():
+def load_flair() -> Tuple:
+    """
+    This function creates and returns the Flair NLP objects for data enrichment.
+
+    :return: The tuple of Flair NLP objects.
+    :rtype: Tuple
+    """
+
     from flair.data import Sentence
     from flair.models import SequenceTagger
 
     # import logging
     # import warnings
-
     # logging.getLogger("flair").setLevel(logging.ERROR)
     # warnings.filterwarnings("ignore", module="huggingface_hub")
 
     tagger = SequenceTagger.load("ner")
+
     return (tagger.predict, Sentence)
 
 
-def enrich_row(row):
+def enrich_row(row: List[str]) -> List[EnrichedCell]:
     """
-    Processes one row. Takes an input row and returns an output row. The
-    global `ENRICHMENT_ARGS` would have previously been set.
+    This function enriches one row. It takes an input row and returns an
+    enriched row. The global ``ENRICHMENT_ARGS`` would have previously been set
+    so it can be used here.
+
+    :param row: The list of cell values in the row.
+    :type row: List[str]
+    :return: The list of enriched cell values in the row.
+    :rtype: List[EnrichedCell]
     """
+
     atterize_fn = ENRICHMENT_ARGS[0]
     atterize_args = ENRICHMENT_ARGS[1:]
 
-    cells = []
+    enriched_row = []
 
-    for raw_cell in row:
-        raw_cell = str(raw_cell)
+    for cell in row:
+        cell = str(cell)
 
-        cell = atterize_fn(raw_cell, *atterize_args)
-        adjust_span_offsets_from_char_to_byte(raw_cell, cell)
+        enriched_cell = atterize_fn(cell, *atterize_args)
+        adjust_span_offsets_from_char_to_byte(cell, enriched_cell)
 
-        cells.append(cell)
+        enriched_row.append(enriched_cell)
 
-    return cells
+    return enriched_row
 
 
-def adjust_span_offsets_from_char_to_byte(raw_cell, cell):
+def adjust_span_offsets_from_char_to_byte(
+    cell: str,
+    enriched_cell: EnrichedCell,
+) -> None:
     """
-    Adjust all spans from character offsets to byte offsets, since Watchful's
-    attributes API takes byte offsets and spacy provides us with character
-    offsets.
+    This function adjusts all the spans of an enriched cell from character
+    offsets to byte offsets, since Watchful's data enrichment API takes in byte
+    offsets. This is useful if your data enrichment functions and models creates
+    character offsets.
+
+    :param cell: The string value contained in the cell.
+    :type cell: str
+    :param enriched_cell: A list of attributes for the cell.
+    :type enriched_cell: EnrichedCell
     """
+
     byte_offsets = {}
     byte_offset = 0
 
-    for char_offset, ch in enumerate(raw_cell):
+    for char_offset, ch in enumerate(cell):
         byte_offsets[char_offset] = byte_offset
         byte_offset += len(ch.encode("utf-8"))
-    byte_offsets[len(raw_cell)] = byte_offset
+    byte_offsets[len(cell)] = byte_offset
 
-    for context in cell:
+    for context in enriched_cell:
         spans = context[0]
         for i, span in enumerate(spans):
             (start, end) = span
             spans[i] = (byte_offsets[start], byte_offsets[end])
 
 
-def init_args(
-    *args,
-) -> None:
+def init_args(*args) -> None:
     """
-    In this function, we initialize the user arguments as global variables.
-    Generally, you should not need to edit this function.
+    In this function, we create variables that we will store in the global
+    :attr:`ENRICHMENT_ARGS`. We then later use them in :func:`enrich_row` to
+    enrich our data row by row.
 
-    Initializes a per-process context with the user function that will be used
-    in the imap. This is not necessarily thread-safe but is multiprocess-safe.
+    This function initializes a per-process context with the user function that
+    will be used in the ``multiprocessing.Pool.imap``. This is not necessarily
+    thread-safe but is multiprocess-safe.
+
+    :param args: A tuple of objects of any type, to be used for the data
+        enrichment.
+    :type args: Tuple
     """
 
     global ENRICHMENT_ARGS
@@ -494,30 +673,38 @@ def enrich(
     in_file: str,
     out_file: str,
     enrich_row_fn: Callable,
-    enrichment_args,
+    enrichment_args: Tuple,
 ) -> None:
     """
-    Usage:
-    in_file: filepath of the csv formatted original dataset
-    out_file: filepath where the enriched attributes in Watchful custom format
-    for Watchful client ingestion are saved to
-    enrich_row_fn: user custom function for enriching every row of the dataset
-    enrichment_args: additional user variables to perform the data enrichment
+    This function enriches a dataset, using an enrichment function that enriches
+    row by row and other enrichment objects, and then produces the attributes.
 
-    Generally, you should not need to edit this function.
+    :param in_file: The filepath of the csv formatted original dataset or the
+        dataset exported from Watchful. This latter will be the former appended
+        with the Watchful columns "Hints" and "HandLabels". It follows that
+        these columns are reserved for Watchful and should not be present in the
+        original dataset.
+    :type in_file: str
+    :param out_file: The filepath where the enriched attributes in Watchful
+        custom format for ingestion by Watchful application are written to.
+    :type out_file: str
+    :param enrich_row_fn: The user custom function for enriching every row of
+        the dataset.
+    :type enrich_row_fn: Callable
+    :param enrichment_args: The additional enrichment objects to perform the
+        data enrichment.
+    :type enrichment_args: Tuple
     """
 
-    sys_encoding = sys.getdefaultencoding()
-
-    with open(in_file, "r", encoding=sys_encoding) as infile:
+    with open(in_file, encoding="utf-8") as infile:
         in_reader = csv.reader(infile)
         n_cols = len(next(in_reader))
         n_rows = None
         for n_rows, _ in enumerate(in_reader, 1):
             pass
 
-    with open(in_file, "r", encoding=sys_encoding) as infile, open(
-        out_file, "w", encoding=sys_encoding
+    with open(in_file, encoding="utf-8") as infile, open(
+        out_file, "w", encoding="utf-8"
     ) as outfile:
 
         in_reader = csv.reader(infile)
@@ -528,13 +715,13 @@ def enrich(
 
         if IS_MULTIPROC:
             # Parallelize to the number of available cores (not the number of
-            # available hyper threads).  `psutil` is the only standard Python
+            # available hyper threads). ``psutil`` is the only standard Python
             # package that can provide this measure (with logical=False).
             # Testing revealed wall times to be quite close to using all logical
             # CPUs, with better overall system responsiveness and less thermal
             # throttling in this scenario.
             # Additionally, as Python's threading uses a GIL, it is unsuitable
-            # for this task.  Use its multiprocessing intsead.  However,
+            # for this task. Use its multiprocessing intsead. However,
             # multiprocessing uses pickle and is unable to send functions across
             # process boundaries, hence the global variable set by the
             # initializer.
@@ -557,56 +744,63 @@ def enrich(
         del ATTR_WRITER
 
 
-def proc_enriched_row(
-    enriched_row: List[EnrichedCell],
-) -> None:
+def proc_enriched_row(enriched_row: List[EnrichedCell]) -> None:
     """
     This function is iterated over every enriched row. Optionally, you may add
-    code if you wish to do something else with every row.
+    code if you wish to do something auxiliary with every row.
+
+    :param enriched_row: A list of enriched cells.
+    :type enriched_row: List[EnrichedCell]
     """
 
-    ########################################
     # Do not edit this code.
     for enriched_cell in enriched_row:
         proc_enriched_cell(enriched_cell)
-    ########################################
 
-    ########################################
-    # EDIT THE CODE BELOW if you wish to do
-    # something else with every row. Here
-    # we simply print to stdout at the end
-    # of every `enriched_row`.
+    # Edit the code below if you wish to do something auxiliary with every row.
+    # Here we simply print to stdout at the end of every `enriched_row`.
     # print(f'{"*" * 20} end of row {"*" * 20}')
-    ########################################
 
 
-def proc_enriched_cell(
-    enriched_cell: EnrichedCell,
-) -> None:
+def proc_enriched_cell(enriched_cell: EnrichedCell) -> None:
     """
     This function is iterated over every enriched cell. Optionally, you may add
-    code if you wish to do something else with every cell.
+    code if you wish to do something auxiliary with every cell.
+
+    :param enriched_cell: An enriched cell.
+    :type enriched_cell: EnrichedCell
     """
 
-    ########################################
     # Do not edit this code.
     ATTR_WRITER(enriched_cell)
-    ########################################
 
-    ########################################
-    # EDIT THE CODE BELOW if you wish to do
-    # something else with every cell. Here
-    # we simply print every `enriched_cell`
-    # to stdout.
+    # Edit the code below if you wish to do something auxiliary with every cell.
+    # Here we simply print every ``enriched_cell`` to stdout.
     # print("Enriched cell: ")
     # pprint(enriched_cell)
-    ########################################
 
 
-def get_vars_for_enrich_row_with_attribute_data(attr_names, attr_file):
+def get_vars_for_enrich_row_with_attribute_data(
+    attr_names: str,
+    attr_filepath: str,
+) -> Tuple[Callable, List[str], csv.reader]:
+    """
+    This function takes in a comma-delimited string of attribute names and the
+    csv attributes filepath. It returns the attribute names as a list, the csv
+    attribute reader, and a function that takes in a full row of attributes and
+    returns the desired attributes.
 
+    :param attr_names: The comma-delimited attribute names.
+    :type attr_names: str
+    :param attr_filepath: The attributes csv filepath.
+    :type attr_filepath: str
+    :return: The list of attribute names, csv attribute reader and a function
+        that takes in a full row of attributes and returns the desired
+        attributes.
+    :rtype: Tuple[Callable, List[str], csv.reader]
+    """
     f = open(  # pylint: disable=consider-using-with
-        attr_file, "r", encoding=sys.getdefaultencoding()
+        attr_filepath, encoding="utf-8"
     )
     attr_reader = csv.reader(f)
     attr_name_list_all = next(attr_reader)
@@ -624,15 +818,20 @@ def get_vars_for_enrich_row_with_attribute_data(attr_names, attr_file):
         def get_attr_row(attr_row_all):
             return list(map(attr_row_all.__getitem__, attr_locs))
 
-    return (get_attr_row, attr_name_list, attr_reader)
+    return get_attr_row, attr_name_list, attr_reader
 
 
-def enrich_row_with_attribute_data(row):
+def enrich_row_with_attribute_data(row: List[str]) -> List[EnrichedCell]:
     """
-    Extracts attributes from an attributes file. Attributes are associated to
-    the entire text in each input dataset cell. The entire text in each input
-    dataset cell is identified by its character start index and character end
-    index.
+    This function extracts the attributes from a row of an attributes file.
+    Attributes are associated to the entire text in each cell of the input
+    dataset row. The entire text in each cell of the input dataset row is
+    identified by its byte start index and byte end index.
+
+    :param row: The list of cell values in the row.
+    :type row: List[str]
+    :return: The list of enriched cell values in the row.
+    :rtype: List[EnrichedCell]
     """
 
     get_attr_row_fn = ENRICHMENT_ARGS[0]
@@ -640,20 +839,20 @@ def enrich_row_with_attribute_data(row):
     attr_row_reader = ENRICHMENT_ARGS[2]
 
     attr_row = get_attr_row_fn(next(attr_row_reader))
-    cells_attrs = []
+    enriched_row = []
 
-    for in_cell in row:
+    for cell in row:
         # Just one span for example-level attributes.
-        span = [(0, len(str(in_cell)))]
+        span = [(0, len(str(cell)))]
 
-        # `cell_attrs` is to be appended over the len of attr_names.
-        cell_attrs = []
+        # ``enriched_cell`` is to be appended over the len of attr_names.
+        enriched_cell = []
 
         for attr_name, attr_val in zip(attr_names, attr_row):
             # This is the attribute representation per input dataset cell as
-            # required by Watchful client interface. Watchful client has a
-            # restriction of uppercase characters and maximum 6 characters on
-            # attr_representn[2].
+            # required by Watchful application interface. Watchful application
+            # has a restriction of uppercase characters and maximum 6 characters
+            # on attr_representn[2].
             # attr_representn = (
             #     span, {attr_name: [attr_val]},
             #     f"EX{attr_name.replace("_", "").upper()}"
@@ -663,30 +862,39 @@ def enrich_row_with_attribute_data(row):
             #     "SOME_GENERAL_INFO_ABOUT_ALL_ATTRIBUTES"
             # )
             attr_representn = (span, {attr_name: [attr_val]})
-            cell_attrs.append(attr_representn)
+            enriched_cell.append(attr_representn)
 
         # Another possible representation.
         # attr_dict = {}
         # for attr_name, attr_val in zip(attr_names, attr_row):
         #     attr_dict[attr_name] = [attr_val]
         # attr_representn = (span, attr_dict, "EXATTR")
-        # cell_attrs.append(attr_representn)
+        # enriched_cell.append(attr_representn)
 
-        cell_attrs.append((span, {}, "EX"))
+        enriched_cell.append((span, {}, "EX"))
+        adjust_span_offsets_from_char_to_byte(cell, enriched_cell)
 
-        cells_attrs.append(cell_attrs)
+        enriched_row.append(enriched_cell)
 
-    return cells_attrs
+    return enriched_row
 
 
-def validate_attr_names(attr_names, attr_file):
+def validate_attribute_names(attr_names: str, attr_filepath: str) -> bool:
     """
-    Check that all attribute names are present in the attribute file. Returns
-    `False` as soon as an attribute name is absent, or `True` when all attribute
-    names match.
+    This function checks that all attribute names are present in the attribute
+    file. It returns False as soon as an attribute name is absent, or True when
+    all attribute names match.
+
+    :param attr_names: The comma-delimited attribute names.
+    :type attr_names: str
+    :param attr_filepath: The attributes filepath.
+    :type attr_filepath: str
+    :return: The boolean indicating if all the attribute names are present in
+        the attributes file.
+    :rtype: bool
     """
 
-    with open(attr_file, "r", encoding=sys.getdefaultencoding()) as f:
+    with open(attr_filepath, encoding="utf-8") as f:
         attr_row_reader = csv.reader(f)
         attr_names_all = next(attr_row_reader)
 
@@ -697,13 +905,22 @@ def validate_attr_names(attr_names, attr_file):
     return True
 
 
-def atterize_values_in_cell(cell, name, values):
+def atterize_values_in_cell(
+    cell: str,
+    attribute_name: str,
+    values: List[re.Pattern],
+) -> EnrichedCell:
     """
-    Helper function to `create_attribute_for_values()` for finding the spans for
-    each value.
-    """
+    This is a helper function to ``create_attribute_for_values()`` for finding
+    the spans for each value in ``values``.
 
-    from heapq import merge
+    :param cell: The original cell.
+    :type cell: str
+    :param attribute_name: The attribute name.
+    :type attribute_name: str
+    :return: The enriched cell.
+    :rtype: EnrichedCell
+    """
 
     cell = str(cell)
     matches = [
@@ -711,17 +928,27 @@ def atterize_values_in_cell(cell, name, values):
         for pattern in values
     ]
     spans = list(merge(*matches))
-    return [(spans, {}, name)]
+    return [(spans, {}, attribute_name)]
 
 
-def create_attribute_for_values(attribute_name, values):
+def create_attribute_for_values(
+    attribute_name: str,
+    values: List[re.Pattern],
+) -> str:
     """
-    Takes an attribute name and a list of known values to create attributes for.
-    The list of values will be looked up in each cell of the currently loaded
-    dataset. An attributes file will be prepared to be loaded in watchful.
-    Returns the filename of the attribute file created, which can be used by the
-    attributes action and function:
-    api.load_attributes(dataset_id, attribute_filename)
+    This function takes an attribute name and a list of known values to create
+    attributes for. The list of values will be looked up in each cell of the
+    currently loaded dataset. An attributes file will be prepared to be loaded
+    into the Watchful application. It returns the filename of the created
+    attribute file, which can be used by the attributes action and function:
+    ``api.load_attributes(dataset_id, attribute_filename)``.
+
+    :param attribute_name: The attribute name.
+    :type attribute_name: str
+    :param values: The list of known values to create attributes for.
+    :type values: List[str]
+    :return: The used attributes filename.
+    :rtype: str
     """
 
     in_file, out_file, out_filename = get_context(attribute_name)
@@ -734,12 +961,19 @@ def create_attribute_for_values(attribute_name, values):
     return out_filename
 
 
-def get_context(attribute_filename):
+def get_context(attribute_filename: str) -> Tuple[str, str, str]:
     """
-    Given a `attribute_filename`, find the current dataset file loaded in
-    Watchful and produce the context needed to enrich that dataset. Also returns
-    the filename of the file used by the attributes action and function:
-    `api.load_attributes(dataset_id, attribute_filename)`
+    This function takes in an attributes filename, finds the current dataset
+    file loaded in Watchful and returns the context needed to enrich that
+    dataset. This context includes the filename of the file used by the
+    attributes action and function:
+    ``client.load_attributes(dataset_id, attribute_filename)``.
+
+    :param attribute_filename: The input attributes filename.
+    :type attribute_filename: str
+    :return: The dataset filepath, used attributes filepath and used attributes
+        filename.
+    :rtype: Tuple[str, str, str]
     """
 
     summary = client.get()
@@ -754,10 +988,25 @@ def get_context(attribute_filename):
     return in_file, out_file, out_filename
 
 
-def get_dataset_id_dir_filepath(summary, in_file="", is_local=True):
+def get_dataset_id_dir_filepath(
+    summary: Dict,
+    in_file: Optional[str] = "",
+    is_local: Optional[bool] = True,
+) -> Tuple[str, str, str]:
     """
     This function returns the id, directory and filepath of the currently opened
     dataset.
+
+    :param summary: The dictionary of the HTTP response from a connection
+        request, defaults to None.
+    :type summary: Dict
+    :param in_file: The dataset filepath, defaults to "".
+    :type in_file: str, optional
+    :param is_local: Boolean indicating whether the Watchful application is
+        local (otherwise hosted), defaults to True.
+    :type is_local: bool, optional
+    :return: The id, directory and filepath of the currently opened dataset.
+    :rtype: Tuple[str, str, str]
     """
 
     summary = client._assert_success(summary)
@@ -765,7 +1014,7 @@ def get_dataset_id_dir_filepath(summary, in_file="", is_local=True):
     datasets_dir = client.get_datasets_dir(summary, is_local)
 
     if in_file != "":
-        # Check that `in_file` exists.
+        # Check that ``in_file`` exists.
         if not os.path.isfile(in_file):
             raise Exception(f"File {in_file} does not exist.")
         dataset_filepath = in_file

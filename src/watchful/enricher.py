@@ -1,50 +1,67 @@
 """
-This script provides the template ``Enricher`` class interface for adding your
-custom data enrichment functions and models. Some example enricher classes are
-provided below for your reference.
+This script provides the abstract :class:`Enricher` class interface to be
+inherited in your custom enricher class, where you can then implement your
+custom data enrichment functions and models within :meth:`enrich_row`. Refer to
+https://github.com/Watchfulio/watchful-py/blob/main/examples/enrichment_intro.ipynb
+for a tutorial on how to implement your custom enricher class.
 """
 ################################################################################
 
 
 from abc import ABCMeta, abstractmethod
-from typing import Generic, Iterable, List, TypeVar
+from typing import Generic, List, TypeVar
 from watchful import attributes
 
 
 class Enricher(metaclass=ABCMeta):
     """
-    This is the interface that customized enricher classes should inherit, and
-    then implement the abstract methods.
+    This is the abstract class that customized enricher classes should inherit,
+    and then implement the abstract methods :meth:`__init__` and
+    :meth:`enrich_row`.
     """
 
     @abstractmethod
-    def __init__(
-        self,
-    ) -> None:
+    def __init__(self) -> None:
         """
-        In this function, we create variables that we will later use in
-        `enrich_row` to enrich our data row-wise.
+        In this method, we create variables that we will store in
+        :attr:`self.enrichment_args`. We then later use them in
+        :meth:`enrich_row` to enrich our data row by row. This :meth:`__init__`
+        method needs to be implemented in your enricher class.
         """
+
         pass
 
     @abstractmethod
-    def enrich_row(
-        self,
-        row: Iterable[str],
-    ) -> List[attributes.EnrichedCell]:
+    def enrich_row(self, row: List[str]) -> List[attributes.EnrichedCell]:
         """
-        In this function, we use our variables from `self.enrichment_args` to
-        enrich every row of your data. The return value is our enriched row.
+        In this method, we use our variables from :attr:`self.enrichment_args`
+        initialized in :meth:`__init__` to enrich our data, row by row. The
+        return value is our enriched row. This :meth:`enrich_row` method needs
+        to be implemented in your enricher class.
+
+        :param row: An list of string values, one for each cell of the row; the
+            rows are read using ``csv.reader`` on a csv file representing the
+            dataset.
+        :type row: List[str]
+        :return: A list of ``attributes.EnrichedCell`` containing the attributes
+            for each cell, for the entire row.
+        :rtype: List[attributes.EnrichedCell]
         """
+
         pass
 
     @classmethod
-    def is_enricher(
-        cls,
-        possibly_an_enricher: Generic[TypeVar("T")],
-    ) -> bool:
+    def is_enricher(cls, possibly_an_enricher: Generic[TypeVar("T")]) -> bool:
         """
-        Convenience method for checking if `possibly_an_enricher` is indeed of
-        type `Enricher`.
+        This is a convenience method used for checking if
+        :class:`possibly_an_enricher` is indeed of the :class:`Enricher` class.
+
+        :param possibly_an_enricher: A class that is possibly of the
+            :class:`Enricher` class.
+        :type possibly_an_enricher: Class
+        :return: A boolean indicating if :class:`possibly_an_enricher` is
+            indeed of the :class:`Enricher` class.
+        :rtype: bool
         """
+
         return issubclass(possibly_an_enricher, cls)
