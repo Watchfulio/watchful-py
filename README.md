@@ -88,3 +88,32 @@ python3 -c 'import watchful; print(watchful.__version__);'
 ```command
 pytest -W ignore::DeprecationWarning tests/test_*.py -v
 ```
+
+## Steps (Release)
+After you've done the preceding steps correctly, you will be able to publish Watchful Package to PyPI. Before cutting a release, ensure the release changes are communicated with engineering@watchful.io. There may be corresponding changes required in the Watchful application; do not worry about this as it will be taken care of by Watchful.
+
+### Prepare Release
+1. Ensure your `main` branch is updated and create a new branch:
+```command
+git checkout main && git pull && git checkout -b bump-version
+```
+2. Bump the version in the [version file](https://github.com/Watchfulio/watchful-py/blob/main/src/watchful/VERSION):
+- e.g. from 1.0.0 to 1.0.1
+3. Commit and push the branch to Github:
+```command
+git add src/watchful/VERSION && git commit -m 'bump version' && git push -u origin bump-version
+```
+4. Open a pull request in Github and merge it to `main` after it is approved.
+
+### Create Release
+1. Visit [Watchful Python Package Releases](https://github.com/Watchfulio/watchful-py/releases) in Github
+2. Click `Draft a new release`
+3. Click `Choose a tag`
+   - Type in v*a.b.c* where _a.b.c_ is the version in the [version file](https://github.com/Watchfulio/watchful-py/blob/main/src/watchful/VERSION) (e.g. v1.0.1 if the version in the version file is 1.0.1)
+   - Type in the release title, which is the same value as above, i.e. v*a.b.c*
+4. Ensure `Target` is set to `main` (should be default)
+5. Ensure `Previous tag` is set to the most current release tag (should be default)
+6. Click `Generate release notes`
+7. Click `Publish release`
+
+The release will be triggered and CI will automatically build and publish the Watchful Python Package to [PyPI](https://pypi.org/project/watchful/)).
