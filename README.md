@@ -116,4 +116,4 @@ git add src/watchful/VERSION && git commit -m 'bump version' && git push -u orig
 6. Click `Generate release notes`
 7. Click `Publish release`
 
-The release will be triggered and CI will automatically build and publish the Watchful Python Package to [PyPI](https://pypi.org/project/watchful/)).
+The release will be triggered and CI will automatically build and publish the Watchful Python Package to [PyPI](https://pypi.org/project/watchful/).
