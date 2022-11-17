@@ -8,7 +8,10 @@ __pycache__/
 dist/
 *.egg-info/
 
-# Watchful
+# Docs
+docs/build/
+
+# Watchful Application
 watchful_ephemeral*
 
 # Others
