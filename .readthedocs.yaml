@@ -1,0 +1,29 @@
+# Read the Docs configuration file.
+# See https://docs.readthedocs.io/en/stable/config-file/v2.html for details.
+################################################################################
+
+# Version is required.
+version: 2
+
+# Set the version of Python and other tools needed.
+build:
+  os: ubuntu-20.04
+  tools:
+    python: "3.8"
+    # Specify other tool versions, if needed.
+    # nodejs: "16"
+    # rust: "1.55"
+    # golang: "1.17"
+
+# Specify optional configuration file for building documentation in the docs/
+# directory with Sphinx.
+sphinx:
+  configuration: docs/source/conf.py
+  # If using Sphinx, specify optional additional formats to build documentation
+  # into.
+  # - pdf
+
+# Specify optional Python requirements required to build documentation.
+python:
+  install:
+  - requirements: docs/requirements_docs.txt
