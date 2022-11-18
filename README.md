@@ -21,6 +21,14 @@ pip3 install watchful[==your.desired.version]
 ```
 - Go through Watchful API introduction [notebook](https://github.com/Watchfulio/watchful-py/blob/main/examples/api_intro.ipynb).
 
+### Enrichment
+
+- Enrich the dataset currently loaded in Watchful with attributes from Spacy
+```command
+python3 -m watchful.enrich [--wf_host URL --wf_port PORT]
+```
+- For more options, pass argument `--help`
+
 ## Steps (Development)
 
 ### Create Python Enviroment
