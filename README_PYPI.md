@@ -34,5 +34,12 @@ After you've done the preceding steps correctly, you will be able to print the v
 python3 -c 'import watchful; print(watchful.__version__);'
 ```
 
+### Examples
+After you have installed the Watchful package, you can use it to empower your workflow in your Watchful application. Refer to our [GitHub examples](https://github.com/Watchfulio/watchful-py/tree/main/examples) to get started.
+> Please contact a [Watchful representative](mailto:sales@watchful.io) for the Watchful application.
+
 ### Documentation
-Stay in tune for our upcoming documentation pages! These are currently inline within the source code.
+Click the following to view the Watchful package documentation:
+- [Latest Watchful package release](https://watchful.readthedocs.io/en/stable/)
+- [Latest on Watchful GitHub](https://watchful.readthedocs.io/en/latest/)
+- [All Watchful package releases](https://readthedocs.org/projects/watchful/)
