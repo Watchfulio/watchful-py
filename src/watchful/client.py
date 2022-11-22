@@ -441,6 +441,18 @@ def records(csv_: str) -> Optional[Dict]:
     return api("records", data=csv_, content_type="text/csv")
 
 
+def col_flag(flag: str, columns: List[bool]) -> Optional[Dict]:
+    """
+    This function sets a flag for all the columns in the list.
+
+    :param flag: "inferenceable" is currently the only supported flag
+    :param columns: list of true/false values, specifying whether the flag should be set for the column
+    :return: The dictionary of the HTTP response from the connection request.
+    :rtype: Dict
+    """
+    return api("col_flag", flag=flag, columns=columns)
+
+
 def class_(class__: str) -> Optional[Dict]:
     """
     This function creates a class.
