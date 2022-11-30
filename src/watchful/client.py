@@ -153,7 +153,15 @@ def _assert_success(summary: Dict) -> Optional[Dict]:
     return summary
 
 
-def _read_response_summary(resp: http.client.HTTPResponse) -> Optional[Dict]:
+api_hook_summary_invariants = None
+
+
+def register_summary_string_hook(function):
+    global api_hook_summary_invariants
+    api_hook_summary_invariants = function
+
+
+def _read_response(resp: http.client.HTTPResponse) -> Optional[Dict]:
     """
     This function raises an exception if ``resp.status`` is not 200, otherwise
     it returns ``ret``.
@@ -163,10 +171,28 @@ def _read_response_summary(resp: http.client.HTTPResponse) -> Optional[Dict]:
     :return: The dictionary of ``resp``.
     :rtype: Dict
     """
+    assert 200 == int(resp.status)
+    ret = json.loads(resp.read())
 
+    if "error_msg" in ret and ret["error_msg"]:
+        print(ret["error_msg"])
+
+    return ret
+
+
+def _read_response_summary(resp: http.client.HTTPResponse) -> Optional[Dict]:
+    """
+    Similar to _read_response(), but includes summary invariant tests, so this
+    is only appropriate for endpoints that return a summary (that is, the /api
+    endpoint rather than /config, /remote, etc).
+    """
     assert 200 == int(resp.status)
 
-    ret = json.loads(resp.read())
+    json_str = resp.read()
+    if api_hook_summary_invariants:
+        api_hook_summary_invariants(json_str)
+    ret = json.loads(json_str)
+
     # One idea:
     # if ret["error_msg"]:
     #     raise Exception(ret["error_msg"])
@@ -713,7 +739,7 @@ def upload_attributes(
         )
     resp = conn.getresponse()
     assert resp.status == 200, f"not OK HTTP status. Was: {resp.status}"
-    return _assert_success(_read_response_summary(resp))
+    return _assert_success(_read_response(resp))
 
 
 def load_attributes(
@@ -986,7 +1012,7 @@ def create_dataset(
         csv_bytes,
         {"Content-Type": "text/csv"},
     )
-    _ = _read_response_summary(conn.getresponse())
+    _ = _read_response(conn.getresponse())
 
     params = json.dumps({"filename": filename, "has_header": has_header})
     conn.request(
@@ -995,7 +1021,7 @@ def create_dataset(
         params,
         {"Content-Type": "application/json"},
     )
-    dataset_id = _read_response_summary(conn.getresponse())["id"]
+    dataset_id = _read_response(conn.getresponse())["id"]
 
     api("dataset_add", id=dataset_id, columns=columns)
 
@@ -1053,7 +1079,7 @@ def config_set(key: str, value: str) -> Optional[Dict]:
         "POST", "/config", params, {"Content-Type": "application/json"}
     )
 
-    return _read_response_summary(conn.getresponse())
+    return _read_response(conn.getresponse())
 
 
 def config() -> Optional[Dict]:
@@ -1068,7 +1094,7 @@ def config() -> Optional[Dict]:
     conn = _get_conn()
     conn.request("GET", "/config", None, {"Content-Type": "application/json"})
 
-    return _read_response_summary(conn.getresponse())
+    return _read_response(conn.getresponse())
 
 
 def set_hub_url(url: str) -> Optional[Dict]:
@@ -1167,7 +1193,7 @@ def hub_api(verb: str, token: str, **args: Dict) -> Optional[Dict]:
     action["verb"] = verb
     conn = _get_conn()
     conn.request("POST", "/remote", json.dumps(action), headers)
-    return _assert_success(_read_response_summary(conn.getresponse()))
+    return _assert_success(_read_response(conn.getresponse()))
 
 
 def login(email: str, password: str) -> Optional[Dict]:
@@ -1189,7 +1215,7 @@ def login(email: str, password: str) -> Optional[Dict]:
     headers.update({"Authorization": f"Basic {credentials}"})
     conn = _get_conn()
     conn.request("POST", "/remote", json.dumps({"verb": "login"}), headers)
-    return _assert_success(_read_response_summary(conn.getresponse()))
+    return _assert_success(_read_response(conn.getresponse()))
 
 
 def publish(token: Optional[str] = None) -> Optional[Dict]:
