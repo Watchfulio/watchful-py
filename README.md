@@ -1,7 +1,7 @@
 # Watchful Python Package for Interacting with Watchful Environment
 
 ## Overview
-This project serves to publish the Watchful Python Package, so that manual distribution can be discontinued and users can install it into their Python environment in their machines over the internet from PyPI. This also helps in the automation of Watchful Python features when used with the product. 
+The Watchful Python Package allows installation of the Watchful Python SDK over the internet from PyPI. This also helps in the automation of Watchful Python features when used with the product. 
 
 The current features include the following and their corresponding user guides:
 - Watchful API and [notebook](https://github.com/Watchfulio/watchful-py/blob/main/examples/api_intro.ipynb)
@@ -14,7 +14,9 @@ The current features include the following and their corresponding user guides:
 ### Create Python Enviroment
 - Refer [here](https://github.com/Watchfulio/watchful-py/blob/main/README_PY_ENV.md) for options.
 
-### Install Watchful Package from PyPI
+### Install Watchful from PyPI (Recommended)
+If you want to use Python to talk to the Watchful API, this is probably what you want:
+
 - Install your desired release version (they can be found at [PyPI](https://pypi.org/project/watchful/))
 ```command
 pip3 install watchful[==your.desired.version]
