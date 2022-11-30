@@ -23,7 +23,7 @@ This readme describes how the Watchful module `enrich.py` can be directly used t
 
 ### Dataset CSV File
 - You are also able to enrich your original dataset using off-the-shelf models that we have already pre-packed, or using your custom enrichment code that can be seamlessly plugged into Watchful (refer to [Usage](#usage))
-<!-- - Refer to our [enrichment introduction notebook](https://github.com/Watchfulio/watchful-py/blob/main/examples/enrichment_intro.ipynb) to get started on custom enrichment-->
+- Refer to our [enrichment introduction notebook](https://github.com/Watchfulio/watchful-py/blob/main/examples/enrichment_intro.ipynb) to get started on custom enrichment
 - The dataset CSV file to be used for the enrichment would be the original dataset that is loaded into Watchful and currently opened in your Watchful application
 
 ## Usage
