@@ -1071,6 +1071,18 @@ def config() -> Optional[Dict]:
     return _read_response_summary(conn.getresponse())
 
 
+def set_hub_url(url: str):
+    """
+    This function sets the hub url of the client.
+    The Hub URL should not change after data has been fetched or published to a hub.
+    :param url: The Hub URL as a string
+    :return: Dict
+    """
+    conn = _get_conn()
+    conn.request("POST", "/set_hub_url", url, {"Content-Type": "text/plain"})
+    return _read_response_summary(conn.getresponse())
+
+
 def print_candidates(summary: Optional[Dict] = None) -> None:
     """
     This function retrieves and prints the column names and all the candidates.
