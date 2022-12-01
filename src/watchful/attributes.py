@@ -591,24 +591,32 @@ def load_flair() -> Tuple:
     return (tagger.predict, Sentence)
 
 
-def enrich_row(row: List[str]) -> List[EnrichedCell]:
+def enrich_row(row: Dict[Optional[str], Optional[str]]) -> List[EnrichedCell]:
     """
-    This function enriches one row. It takes an input row and returns an
-    enriched row. The global ``ENRICHMENT_ARGS`` would have previously been set
-    so it can be used here.
+    This function enriches one row. It takes named cells of an input row and
+    returns an enriched row. The global ``ENRICHMENT_ARGS`` would have
+    previously been set so it can be used here.
 
-    :param row: The list of cell values in the row.
-    :type row: List[str]
+    :param row: The dictionary of named cell values in the row.
+    :type row: Dict[Optional[str], Optional[str]]
     :return: The list of enriched cell values in the row.
     :rtype: List[EnrichedCell]
     """
+
+    assert (
+        None not in row
+    ), "Dataset error: there is at least one unused cell value!"
+    row_values = row.values()
+    assert (
+        None not in row_values
+    ), "Dataset error: there is at least one absent cell value!"
 
     atterize_fn = ENRICHMENT_ARGS[0]
     atterize_args = ENRICHMENT_ARGS[1:]
 
     enriched_row = []
 
-    for cell in row:
+    for cell in row_values:
         cell = str(cell)
 
         enriched_cell = atterize_fn(cell, *atterize_args)
@@ -696,19 +704,18 @@ def enrich(
     :type enrichment_args: Tuple
     """
 
-    with open(in_file, encoding="utf-8") as infile:
+    with open(in_file, encoding="utf-8", newline="") as infile:
         in_reader = csv.reader(infile)
         n_cols = len(next(in_reader))
         n_rows = None
         for n_rows, _ in enumerate(in_reader, 1):
             pass
 
-    with open(in_file, encoding="utf-8") as infile, open(
+    with open(in_file, encoding="utf-8", newline="") as infile, open(
         out_file, "w", encoding="utf-8"
     ) as outfile:
 
-        in_reader = csv.reader(infile)
-        next(in_reader)
+        in_reader = csv.DictReader(infile)
 
         global ATTR_WRITER
         ATTR_WRITER = writer(outfile, n_rows, n_cols)
@@ -800,7 +807,7 @@ def get_vars_for_enrich_row_with_attribute_data(
     :rtype: Tuple[Callable, List[str], csv.reader]
     """
     f = open(  # pylint: disable=consider-using-with
-        attr_filepath, encoding="utf-8"
+        attr_filepath, encoding="utf-8", newline=""
     )
     attr_reader = csv.reader(f)
     attr_name_list_all = next(attr_reader)
@@ -821,18 +828,28 @@ def get_vars_for_enrich_row_with_attribute_data(
     return get_attr_row, attr_name_list, attr_reader
 
 
-def enrich_row_with_attribute_data(row: List[str]) -> List[EnrichedCell]:
+def enrich_row_with_attribute_data(
+    row: Dict[Optional[str], Optional[str]],
+) -> List[EnrichedCell]:
     """
     This function extracts the attributes from a row of an attributes file.
-    Attributes are associated to the entire text in each cell of the input
+    Attributes are associated to the entire text in each named cell of the input
     dataset row. The entire text in each cell of the input dataset row is
     identified by its byte start index and byte end index.
 
-    :param row: The list of cell values in the row.
-    :type row: List[str]
+    :param row: The dictionary of named cell values in the row.
+    :type row: Dict[Optional[str], Optional[str]]
     :return: The list of enriched cell values in the row.
     :rtype: List[EnrichedCell]
     """
+
+    assert (
+        None not in row
+    ), "Dataset error: there is at least one unused cell value!"
+    row_values = row.values()
+    assert (
+        None not in row_values
+    ), "Dataset error: there is at least one absent cell value!"
 
     get_attr_row_fn = ENRICHMENT_ARGS[0]
     attr_names = ENRICHMENT_ARGS[1]
@@ -841,7 +858,7 @@ def enrich_row_with_attribute_data(row: List[str]) -> List[EnrichedCell]:
     attr_row = get_attr_row_fn(next(attr_row_reader))
     enriched_row = []
 
-    for cell in row:
+    for cell in row_values:
         # Just one span for example-level attributes.
         span = [(0, len(str(cell)))]
 
@@ -894,7 +911,7 @@ def validate_attribute_names(attr_names: str, attr_filepath: str) -> bool:
     :rtype: bool
     """
 
-    with open(attr_filepath, encoding="utf-8") as f:
+    with open(attr_filepath, encoding="utf-8", newline="") as f:
         attr_row_reader = csv.reader(f)
         attr_names_all = next(attr_row_reader)
 
