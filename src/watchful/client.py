@@ -1071,6 +1071,21 @@ def config() -> Optional[Dict]:
     return _read_response_summary(conn.getresponse())
 
 
+def set_hub_url(url: str) -> Optional[Dict]:
+    """
+    This function sets the Watchful hub URL of the Watchful client. The Watchful
+    hub URL should not change after data has been fetched or published to a hub.
+
+    :param url: The Watchful hub URL.
+    :type url: str
+    :return: The dictionary of the HTTP response from the connection request.
+    :rtype: dict
+    """
+    conn = _get_conn()
+    conn.request("POST", "/set_hub_url", url, {"Content-Type": "text/plain"})
+    return _read_response_summary(conn.getresponse())
+
+
 def print_candidates(summary: Optional[Dict] = None) -> None:
     """
     This function retrieves and prints the column names and all the candidates.
