@@ -9,7 +9,7 @@ for a tutorial on how to implement your custom enricher class.
 
 
 from abc import ABCMeta, abstractmethod
-from typing import Generic, List, TypeVar
+from typing import Generic, Dict, List, Optional, TypeVar
 from watchful import attributes
 
 
@@ -32,17 +32,21 @@ class Enricher(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def enrich_row(self, row: List[str]) -> List[attributes.EnrichedCell]:
+    def enrich_row(
+        self,
+        row: Dict[Optional[str], Optional[str]],
+    ) -> List[attributes.EnrichedCell]:
         """
         In this method, we use our variables from :attr:`self.enrichment_args`
         initialized in :meth:`__init__` to enrich our data, row by row. The
         return value is our enriched row. This :meth:`enrich_row` method needs
         to be implemented in your enricher class.
 
-        :param row: An list of string values, one for each cell of the row; the
+        :param row: A dictionary containing string keys as the column names and
+            string values as the cell values, one for each cell of the row; the
             rows are read using ``csv.reader`` on a csv file representing the
             dataset.
-        :type row: List[str]
+        :type row: Dict[Optional[str], Optional[str]]
         :return: A list of ``attributes.EnrichedCell`` containing the attributes
             for each cell, for the entire row.
         :rtype: List[attributes.EnrichedCell]
