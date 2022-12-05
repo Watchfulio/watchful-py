@@ -153,44 +153,39 @@ def _assert_success(summary: Dict) -> Optional[Dict]:
     return summary
 
 
-api_hook_summary_invariants = None
-
+API_HOOK_SUMMARY_INVARIANTS = None
 
 def register_summary_string_hook(function):
-    global api_hook_summary_invariants
-    api_hook_summary_invariants = function
+    """
+    This is used internally for testing Watchful. Provide a function, and it will be called with every summary object that is returned from any API call, as the raw response body before JSON parsing. This can be used, for example, to instrument our test suite with a function that writes every summary object to disk. Most SDK users won't need this, but if you find a clever use for it, let us know!
+    """
+    global API_HOOK_SUMMARY_INVARIANTS
+    API_HOOK_SUMMARY_INVARIANTS = function
 
 
-def _read_response(resp: http.client.HTTPResponse) -> Optional[Dict]:
+def _read_response(resp: http.client.HTTPResponse, resp_is_summary = False) -> Optional[Dict]:
     """
     This function raises an exception if ``resp.status`` is not 200, otherwise
     it returns ``ret``.
 
+    If ``resp_is_summary`` then we will also run the summary invariant tests
+    (or any hook that was provided), so this is only appropriate for endpoints
+    that return a summary, that is, the /api endpoint rather than some other
+    JSON object like /config, /remote, etc.
+
     :param resp: The HTTP response from a connection request.
     :type resp: http.client.HTTPResponse
     :return: The dictionary of ``resp``.
+    :param resp_is_summary: Indicates the response is known to be a summary object.
     :rtype: Dict
     """
+    # the assertion is here because that's what our API endpoints always return
     assert 200 == int(resp.status)
-    ret = json.loads(resp.read())
-
-    if "error_msg" in ret and ret["error_msg"]:
-        print(ret["error_msg"])
-
-    return ret
-
-
-def _read_response_summary(resp: http.client.HTTPResponse) -> Optional[Dict]:
-    """
-    Similar to _read_response(), but includes summary invariant tests, so this
-    is only appropriate for endpoints that return a summary (that is, the /api
-    endpoint rather than /config, /remote, etc).
-    """
-    assert 200 == int(resp.status)
-
     json_str = resp.read()
-    if api_hook_summary_invariants:
-        api_hook_summary_invariants(json_str)
+
+    if resp_is_summary and API_HOOK_SUMMARY_INVARIANTS:
+        API_HOOK_SUMMARY_INVARIANTS(json_str)
+
     ret = json.loads(json_str)
 
     # One idea:
@@ -235,7 +230,7 @@ def api_send_action(action: Dict) -> Optional[Dict]:
     conn.request(
         "POST", "/api", json.dumps(action), {"Content-Type": "application/json"}
     )
-    return _read_response_summary(conn.getresponse())
+    return _read_response(conn.getresponse(), resp_is_summary=True)
 
 
 def ephemeral(port: str = "9002") -> None:
