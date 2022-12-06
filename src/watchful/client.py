@@ -158,7 +158,12 @@ API_HOOK_SUMMARY_INVARIANTS = None
 
 def register_summary_string_hook(function):
     """
-    This is used internally for testing Watchful. Provide a function, and it will be called with every summary object that is returned from any API call, as the raw response body before JSON parsing. This can be used, for example, to instrument our test suite with a function that writes every summary object to disk. Most SDK users won't need this, but if you find a clever use for it, let us know!
+    This is used internally for testing Watchful. Provide a function, and it
+    will be called with every summary object that is returned from any API
+    call, as the raw response body before JSON parsing. This can be used, for
+    example, to instrument our test suite with a function that writes every
+    summary object to disk. Most SDK users won't need this, but if you find a
+    clever use for it, let us know!
     """
     global API_HOOK_SUMMARY_INVARIANTS
     API_HOOK_SUMMARY_INVARIANTS = function
