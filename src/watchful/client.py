@@ -153,20 +153,25 @@ def _assert_success(summary: Dict) -> Optional[Dict]:
     return summary
 
 
-API_HOOK_SUMMARY_INVARIANTS = None
+# as used by register_summary_string_hook
+API_SUMMARY_HOOK_CALLBACK = None
 
 
-def register_summary_string_hook(function):
+def register_summary_hook(function: Callable) -> None:
     """
-    This is used internally for testing Watchful. Provide a function, and it
-    will be called with every summary object that is returned from any API
-    call, as the raw response body before JSON parsing. This can be used, for
-    example, to instrument our test suite with a function that writes every
-    summary object to disk. Most SDK users won't need this, but if you find a
-    clever use for it, let us know!
+    This is used for testing Watchful, but may have other uses. Provide a
+    function, and it will be called with every summary object that is returned
+    from any API call, as the raw response body before JSON parsing. This can
+    be used, for example, to instrument our test suite with a function that
+    writes every summary object to disk, creating a dataset of Watchful summary
+    objects for further analysis. Most SDK users probably won't be reaching for
+    this function every day, but if you find a clever use for it, let us know!
+
+    :param function: Your function to be called with every summary string
+    :type function: Callable
     """
-    global API_HOOK_SUMMARY_INVARIANTS
-    API_HOOK_SUMMARY_INVARIANTS = function
+    global API_SUMMARY_HOOK_CALLBACK
+    API_SUMMARY_HOOK_CALLBACK = function
 
 
 def _read_response(
@@ -191,8 +196,8 @@ def _read_response(
     assert 200 == int(resp.status)
     json_str = resp.read()
 
-    if resp_is_summary and API_HOOK_SUMMARY_INVARIANTS:
-        API_HOOK_SUMMARY_INVARIANTS(json_str)
+    if resp_is_summary and API_SUMMARY_HOOK_CALLBACK:
+        API_SUMMARY_HOOK_CALLBACK(json_str)
 
     ret = json.loads(json_str)
 
