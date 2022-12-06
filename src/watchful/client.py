@@ -159,13 +159,13 @@ API_SUMMARY_HOOK_CALLBACK = None
 
 def register_summary_hook(function: Callable) -> None:
     """
-    This is used for testing Watchful, but may have other uses. Provide a
-    function, and it will be called with every summary object that is returned
-    from any API call, as the raw response body before JSON parsing. This can
-    be used, for example, to instrument our test suite with a function that
-    writes every summary object to disk, creating a dataset of Watchful summary
-    objects for further analysis. Most SDK users probably won't be reaching for
-    this function every day, but if you find a clever use for it, let us know!
+    Used internally for testing, but may have other uses. Provide a function,
+    and it will be called with every summary object that is returned from any
+    API call, as the raw response body before JSON parsing. This can be used,
+    for example, to instrument a test suite with a function that writes every
+    summary object to disk, creating a dataset of Watchful summary objects for
+    further analysis. Most SDK users probably won't be reaching for this
+    function every day, but if you find a clever use for it, let us know!
 
     :param function: Your function to be called with every summary string
     :type function: Callable
