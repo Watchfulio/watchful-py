@@ -159,13 +159,13 @@ API_SUMMARY_HOOK_CALLBACK = None
 
 def register_summary_hook(function: Callable) -> None:
     """
-    Used internally for testing, but may have other uses. Provide a function,
-    and it will be called with every summary object that is returned from any
-    API call, as the raw response body before JSON parsing. This can be used,
-    for example, to instrument a test suite with a function that writes every
-    summary object to disk, creating a dataset of Watchful summary objects for
-    further analysis. Most SDK users probably won't be reaching for this
-    function every day, but if you find a clever use for it, let us know!
+    This function allows you to provide a function that will be called with
+    every summary object that is returned from any API call to the /api
+    endpoint, that being the raw response body before JSON parsing. This can be
+    used, for example, to instrument a test suite with a function that writes
+    every summary object to disk and then creating a dataset of Watchful summary
+    objects for further analysis. Most SDK users probably won't be reaching for
+    this function every day, but if you find a clever use for it, let us know!
 
     :param function: Your function to be called with every summary string
     :type function: Callable
@@ -181,15 +181,16 @@ def _read_response(
     This function raises an exception if ``resp.status`` is not 200, otherwise
     it returns ``ret``.
 
-    If ``resp_is_summary`` then we will also run the ``API_SUMMARY_HOOK_CALLBACK``
-    (any hook that was provided), so this is only appropriate for endpoints that
-    return a summary, that is, the /api endpoint rather than some other JSON
-    object like /config, /remote, etc.
+    If ``resp_is_summary`` then we will also run the
+    ``API_SUMMARY_HOOK_CALLBACK`` (any hook that was provided), so this is only
+    appropriate for endpoints that return a summary, that is, the /api endpoint
+    rather than some other JSON object like /config, /remote, etc.
 
     :param resp: The HTTP response from a connection request.
     :type resp: http.client.HTTPResponse
     :return: The dictionary of ``resp``.
-    :param resp_is_summary: Indicates the response is known to be a summary object.
+    :param resp_is_summary: Indicates the response is known to be a summary
+        object.
     :rtype: Dict
     """
     # the assertion is here because that's what our API endpoints always return
