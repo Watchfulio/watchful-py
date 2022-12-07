@@ -181,10 +181,10 @@ def _read_response(
     This function raises an exception if ``resp.status`` is not 200, otherwise
     it returns ``ret``.
 
-    If ``resp_is_summary`` then we will also run the summary invariant tests
-    (or any hook that was provided), so this is only appropriate for endpoints
-    that return a summary, that is, the /api endpoint rather than some other
-    JSON object like /config, /remote, etc.
+    If ``resp_is_summary`` then we will also run the ``API_SUMMARY_HOOK_CALLBACK``
+    (any hook that was provided), so this is only appropriate for endpoints that
+    return a summary, that is, the /api endpoint rather than some other JSON
+    object like /config, /remote, etc.
 
     :param resp: The HTTP response from a connection request.
     :type resp: http.client.HTTPResponse
