@@ -1118,7 +1118,7 @@ def set_hub_url(url: str) -> Optional[Dict]:
     """
     conn = _get_conn()
     conn.request("POST", "/set_hub_url", url, {"Content-Type": "text/plain"})
-    return _read_response_summary(conn.getresponse())
+    return _read_response(conn.getresponse())
 
 
 def print_candidates(summary: Optional[Dict] = None) -> None:
