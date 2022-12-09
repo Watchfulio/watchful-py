@@ -153,20 +153,55 @@ def _assert_success(summary: Dict) -> Optional[Dict]:
     return summary
 
 
-def _read_response_summary(resp: http.client.HTTPResponse) -> Optional[Dict]:
+# as used by register_summary_string_hook
+API_SUMMARY_HOOK_CALLBACK = None
+
+
+def register_summary_hook(function: Callable) -> None:
+    """
+    This function allows you to provide a function that will be called with
+    every summary object that is returned from any API call to the /api
+    endpoint, that being the raw response body before JSON parsing. This can be
+    used, for example, to instrument a test suite with a function that writes
+    every summary object to disk and then creating a dataset of Watchful summary
+    objects for further analysis. Most SDK users probably won't be reaching for
+    this function every day, but if you find a clever use for it, let us know!
+
+    :param function: Your function to be called with every summary string
+    :type function: Callable
+    """
+    global API_SUMMARY_HOOK_CALLBACK
+    API_SUMMARY_HOOK_CALLBACK = function
+
+
+def _read_response(
+    resp: http.client.HTTPResponse, resp_is_summary=False
+) -> Optional[Dict]:
     """
     This function raises an exception if ``resp.status`` is not 200, otherwise
     it returns ``ret``.
 
+    If ``resp_is_summary`` then we will also run the
+    ``API_SUMMARY_HOOK_CALLBACK`` (any hook that was provided), so this is only
+    appropriate for endpoints that return a summary, that is, the /api endpoint
+    rather than some other JSON object like /config, /remote, etc.
+
     :param resp: The HTTP response from a connection request.
     :type resp: http.client.HTTPResponse
     :return: The dictionary of ``resp``.
+    :param resp_is_summary: Indicates the response is known to be a summary
+        object.
     :rtype: Dict
     """
-
+    # the assertion is here because that's what our API endpoints always return
     assert 200 == int(resp.status)
+    json_str = resp.read()
 
-    ret = json.loads(resp.read())
+    if resp_is_summary and API_SUMMARY_HOOK_CALLBACK:
+        API_SUMMARY_HOOK_CALLBACK(json_str)
+
+    ret = json.loads(json_str)
+
     # One idea:
     # if ret["error_msg"]:
     #     raise Exception(ret["error_msg"])
@@ -209,7 +244,7 @@ def api_send_action(action: Dict) -> Optional[Dict]:
     conn.request(
         "POST", "/api", json.dumps(action), {"Content-Type": "application/json"}
     )
-    return _read_response_summary(conn.getresponse())
+    return _read_response(conn.getresponse(), resp_is_summary=True)
 
 
 def ephemeral(port: str = "9002") -> None:
@@ -713,7 +748,7 @@ def upload_attributes(
         )
     resp = conn.getresponse()
     assert resp.status == 200, f"not OK HTTP status. Was: {resp.status}"
-    return _assert_success(_read_response_summary(resp))
+    return _assert_success(_read_response(resp))
 
 
 def load_attributes(
@@ -986,7 +1021,7 @@ def create_dataset(
         csv_bytes,
         {"Content-Type": "text/csv"},
     )
-    _ = _read_response_summary(conn.getresponse())
+    _ = _read_response(conn.getresponse())
 
     params = json.dumps({"filename": filename, "has_header": has_header})
     conn.request(
@@ -995,7 +1030,7 @@ def create_dataset(
         params,
         {"Content-Type": "application/json"},
     )
-    dataset_id = _read_response_summary(conn.getresponse())["id"]
+    dataset_id = _read_response(conn.getresponse())["id"]
 
     api("dataset_add", id=dataset_id, columns=columns)
 
@@ -1053,7 +1088,7 @@ def config_set(key: str, value: str) -> Optional[Dict]:
         "POST", "/config", params, {"Content-Type": "application/json"}
     )
 
-    return _read_response_summary(conn.getresponse())
+    return _read_response(conn.getresponse())
 
 
 def config() -> Optional[Dict]:
@@ -1068,7 +1103,7 @@ def config() -> Optional[Dict]:
     conn = _get_conn()
     conn.request("GET", "/config", None, {"Content-Type": "application/json"})
 
-    return _read_response_summary(conn.getresponse())
+    return _read_response(conn.getresponse())
 
 
 def set_hub_url(url: str) -> Optional[Dict]:
@@ -1083,7 +1118,7 @@ def set_hub_url(url: str) -> Optional[Dict]:
     """
     conn = _get_conn()
     conn.request("POST", "/set_hub_url", url, {"Content-Type": "text/plain"})
-    return _read_response_summary(conn.getresponse())
+    return _read_response(conn.getresponse())
 
 
 def print_candidates(summary: Optional[Dict] = None) -> None:
@@ -1167,7 +1202,7 @@ def hub_api(verb: str, token: str, **args: Dict) -> Optional[Dict]:
     action["verb"] = verb
     conn = _get_conn()
     conn.request("POST", "/remote", json.dumps(action), headers)
-    return _assert_success(_read_response_summary(conn.getresponse()))
+    return _assert_success(_read_response(conn.getresponse()))
 
 
 def login(email: str, password: str) -> Optional[Dict]:
@@ -1189,7 +1224,7 @@ def login(email: str, password: str) -> Optional[Dict]:
     headers.update({"Authorization": f"Basic {credentials}"})
     conn = _get_conn()
     conn.request("POST", "/remote", json.dumps({"verb": "login"}), headers)
-    return _assert_success(_read_response_summary(conn.getresponse()))
+    return _assert_success(_read_response(conn.getresponse()))
 
 
 def publish(token: Optional[str] = None) -> Optional[Dict]:
