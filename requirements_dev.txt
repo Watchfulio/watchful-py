@@ -7,7 +7,7 @@ pylint==2.15.5
 twine==4.0.1
 flair==0.11.3
 psutil==5.9.2
-spacy==3.4.1
+spacy==3.4.3
 spacytextblob==4.0.0
 sphinx==5.2.3
 sphinx_rtd_theme==1.0.0
