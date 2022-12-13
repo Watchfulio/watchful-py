@@ -31,9 +31,7 @@ def test_version(test_env: str) -> None:  # pylint: disable=unused-variable
             #     f"{importlib.metadata.version(_get_package_name())} and "
             #     f"{version}."
             # )
-            assert (
-                watchful.__version__ == version
-            ), (
+            assert watchful.__version__ == version, (
                 f"Versions in SDK ({watchful.__version__}) and source code "
                 f"({version}) are different!"
             )
