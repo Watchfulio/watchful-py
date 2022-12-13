@@ -1,5 +1,5 @@
 """
-Basic tests for Watchful SDK.
+This script tests Watchful SDK version.
 """
 ################################################################################
 
@@ -23,14 +23,20 @@ def test_version(test_env: str) -> None:  # pylint: disable=unused-variable
         )
         with open(filename, "r", encoding=sys.getdefaultencoding()) as f:
             version = f.readline()
-            # assert watchful.__version__ \
-            #     == importlib.metadata.version(_get_package_name()) \
-            #     == version, f"versions are {watchful.__version__}, " \
-            #         f"{importlib.metadata.version(_get_package_name())} and " \
-            #         f"{version}."
+            # assert (watchful.__version__
+            #     == importlib.metadata.version(_get_package_name())
+            #     == version
+            # ), (
+            #     f"versions are {watchful.__version__}, "
+            #     f"{importlib.metadata.version(_get_package_name())} and "
+            #     f"{version}."
+            # )
             assert (
                 watchful.__version__ == version
-            ), f"Versions are different: {watchful.__version__} and {version}."
+            ), (
+                f"Versions in SDK ({watchful.__version__}) and source code "
+                f"({version}) are different!"
+            )
     else:
         assert False, f"No such environment: {test_env}"
 
