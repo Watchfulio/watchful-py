@@ -12,7 +12,6 @@ import pathlib
 import shutil
 import sys
 from typing import List, Type
-from uuid import uuid4
 from watchful import client, attributes
 from watchful.enricher import Enricher
 
@@ -172,7 +171,7 @@ def main(args: List[str] = None, custom_enricher: Enricher = None) -> None:
             user_home_path = os.path.expanduser("~")
             working_dir = os.path.join(user_home_path, "watchful", "working")
             os.makedirs(working_dir, exist_ok=True)
-            args.in_file = os.path.join(working_dir, str(uuid4()))
+            args.in_file = os.path.join(working_dir, dataset_id)
             client.export_dataset_to_path(args.in_file, summary["field_names"])
         else:
             print(

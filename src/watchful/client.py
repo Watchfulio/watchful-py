@@ -16,7 +16,7 @@ import subprocess
 import sys
 import time
 import urllib
-from typing import Callable, Dict, Generator, List, Optional
+from typing import Callable, Dict, Generator, List, Optional, Union
 from uuid import uuid4
 
 
@@ -109,7 +109,7 @@ def await_summary(
     :param unchanged_timeout: The timeout in seconds, defaults to 60.
     :type unchanged_timeout: int, optional
     :return: The dictionary of the HTTP response from :func:`get()`.
-    :rtype: Dict
+    :rtype: Dict, optional
     """
 
     prev_summary = None
@@ -141,7 +141,7 @@ def _assert_success(summary: Dict) -> Optional[Dict]:
         request.
     :type summary: Dict
     :return: The summary.
-    :rtype: Dict
+    :rtype: Dict, optional
     """
 
     if "error_msg" in summary and summary["error_msg"]:
@@ -175,7 +175,7 @@ def register_summary_hook(function: Callable) -> None:
 
 
 def _read_response(
-    resp: http.client.HTTPResponse, resp_is_summary=False
+    resp: http.client.HTTPResponse, resp_is_summary: bool = False
 ) -> Optional[Dict]:
     """
     This function raises an exception if ``resp.status`` is not 200, otherwise
@@ -188,10 +188,11 @@ def _read_response(
 
     :param resp: The HTTP response from a connection request.
     :type resp: http.client.HTTPResponse
+    :param resp_is_summary: Boolean indicating if the response is known to be a
+        summary object.
+    :type resp_is_summary: bool, optional
     :return: The dictionary of ``resp``.
-    :param resp_is_summary: Indicates the response is known to be a summary
-        object.
-    :rtype: Dict
+    :rtype: Dict, optional
     """
     # the assertion is here because that's what our API endpoints always return
     assert 200 == int(resp.status)
@@ -221,7 +222,7 @@ def api(verb: str, **args: Dict) -> Optional[Dict]:
     :param args: Optional parameters to support the API for ``verb``.
     :type args: Dict
     :return: The dictionary of the HTTP response from the connection request.
-    :rtype: Dict
+    :rtype: Dict, optional
     """
 
     action = args  # already a dictionary
@@ -237,7 +238,7 @@ def api_send_action(action: Dict) -> Optional[Dict]:
     :param action: The ``verb`` for the API with optional parameters.
     :type action: Dict
     :return: The dictionary of the HTTP response from the connection request.
-    :rtype: Dict
+    :rtype: Dict, optional
     """
 
     conn = _get_conn()
@@ -293,7 +294,7 @@ def list_projects() -> Dict:
     return json.loads(r.read())
 
 
-def open_project(id_: str) -> bytes:
+def open_project(id_: str) -> str:
     """
     This function opens a project via its project id, which is the path to its
     hints file.
@@ -301,7 +302,7 @@ def open_project(id_: str) -> bytes:
     :param id_: The project id.
     :type id_: str
     :return: The read HTTP response.
-    :rtype: bytes
+    :rtype: str
     """
 
     c = _get_conn()
@@ -313,21 +314,44 @@ def open_project(id_: str) -> bytes:
     )
     r = c.getresponse()
 
-    ret = r.read()
+    ret = r.read().decode("utf-8")
     await_plabels()
 
     return ret
 
 
-def create_project() -> bytes:
+def create_project(title_: Optional[str] = None) -> Union[str, Optional[Dict]]:
     """
-    This function creates a new project.
+    This function creates a new project. Additionally, if title is supplied, a
+    title is given to the newly created project.
 
-    :return: The read HTTP response.
-    :rtype: bytes
+    :param title: The title for the project.
+    :type title: str, optional
+    :return: If a title is supplied and ``open_project("new")`` is successful,
+        the dictionary of the HTTP response from the connection request from
+        ``title(title)``; otherwise the read HTTP response from
+        ``open_project("new")``.
+    :rtype: Union[str, Optional[Dict]]
     """
 
-    return open_project("new")
+    ret = open_project("new")
+
+    if title_ is not None and ret == '"OK"\n':
+        return title(title_)
+    return ret
+
+
+def title(title_: str) -> Optional[Dict]:
+    """
+    This function gives a title to a newly created project.
+
+    :param title_: The title for the project.
+    :type title_: str
+    :return: The dictionary of the HTTP response from the connection request.
+    :rtype: Dict, optional
+    """
+
+    return api("title", title=title_)
 
 
 def get_project_id(summary: Dict) -> str:
@@ -470,7 +494,7 @@ def records(csv_: str) -> Optional[Dict]:
     :param csv_: The csv dataset.
     :type csv_: str
     :return: The dictionary of the HTTP response from the connection request.
-    :rtype: Dict
+    :rtype: Dict, optional
     """
 
     return api("records", data=csv_, content_type="text/csv")
@@ -483,7 +507,7 @@ def col_flag(flag: str, columns: List[bool]) -> Optional[Dict]:
     :param flag: "inferenceable" is currently the only supported flag
     :param columns: list of true/false values, specifying whether the flag should be set for the column
     :return: The dictionary of the HTTP response from the connection request.
-    :rtype: Dict
+    :rtype: Dict, optional
     """
     return api("col_flag", flag=flag, columns=columns)
 
@@ -495,7 +519,7 @@ def class_(class__: str) -> Optional[Dict]:
     :param class__: The class.
     :type class__: str
     :return: The dictionary of the HTTP response from the connection request.
-    :rtype: Dict
+    :rtype: Dict, optional
     """
 
     return api("class", name=class__)
@@ -511,7 +535,7 @@ def create_class(class__: str, class_type: str = "ftc") -> Optional[Dict]:
         to "ftc".
     :type class_type: str, optional
     :return: The dictionary of the HTTP response from the connection request.
-    :rtype: Dict
+    :rtype: Dict, optional
     """
 
     return api("class", name=class__, class_type=class_type)
@@ -527,7 +551,7 @@ def query_async(q: str, page: int = 0) -> Optional[Dict]:
     :param page: The page, defaults to 0.
     :type page: int, optional
     :return: The dictionary of the HTTP response from the connection request.
-    :rtype: Dict
+    :rtype: Dict, optional
     """
 
     return api("query", query=q, page=page)
@@ -542,7 +566,7 @@ def query(q: str, page: int = 0) -> Optional[Dict]:
     :param page: The page, defaults to 0.
     :type page: int, optional
     :return: The dictionary of the HTTP response from the connection request.
-    :rtype: Dict
+    :rtype: Dict, optional
     """
 
     query_async(q, page)
@@ -588,7 +612,7 @@ def base_rate(class__: str, rate: int) -> Optional[Dict]:
     :param rate: The base rate for the class.
     :type rate: int
     :return: The dictionary of the HTTP response from the connection request.
-    :rtype: Dict
+    :rtype: Dict, optional
     """
 
     return api("base_rate", label=class__, rate=rate)
@@ -599,7 +623,7 @@ def await_plabels() -> Optional[Dict]:
     This function gets the updated HTTP response.
 
     :return: The dictionary of the HTTP response from the connection request.
-    :rtype: Dict
+    :rtype: Dict, optional
     """
 
     return await_summary(lambda s: s["status"] == "current")
@@ -617,7 +641,7 @@ def hinter_async(class__: str, query_: str, weight: int) -> Optional[Dict]:
     :param weight: The weight for the hinter.
     :type weight: int
     :return: The dictionary of the HTTP response from the connection request.
-    :rtype: Dict
+    :rtype: Dict, optional
     """
 
     return api("hinter", label=class__, weight=weight, query=query_)
@@ -634,7 +658,7 @@ def hinter(class__: str, query_: str, weight: int) -> Optional[Dict]:
     :param weight: The weight for the hinter.
     :type weight: int
     :return: The dictionary of the HTTP response from the connection request.
-    :rtype: Dict
+    :rtype: Dict, optional
     """
 
     _assert_success(hinter_async(class__, query_, weight))
@@ -648,7 +672,7 @@ def delete(id_: int) -> Optional[Dict]:
     :param id_: The hinter id to delete.
     :type id_: int
     :return: The dictionary of the HTTP response from the connection request.
-    :rtype: Dict
+    :rtype: Dict, optional
     """
 
     return api("delete", id=id_)
@@ -661,7 +685,7 @@ def delete_class(class__: str) -> Optional[Dict]:
     :param class__: The class to delete.
     :type class__: str
     :return: The dictionary of the HTTP response from the connection request.
-    :rtype: Dict
+    :rtype: Dict, optional
     """
 
     return api("delete", class_name=class__)
@@ -676,23 +700,10 @@ def get() -> Optional[Dict]:
     more.
 
     :return: The dictionary of the HTTP response from the connection request.
-    :rtype: Dict
+    :rtype: Dict, optional
     """
 
     return api("nop")
-
-
-def title(title_: str) -> Optional[Dict]:
-    """
-    This function gives a title to a newly created project.
-
-    :param title_: The title for the project.
-    :type title_: str
-    :return: The dictionary of the HTTP response from the connection request.
-    :rtype: Dict
-    """
-
-    return api("title", title=title_)
 
 
 def external_hinter(class__: str, name: str, weight: int) -> Optional[Dict]:
@@ -706,7 +717,7 @@ def external_hinter(class__: str, name: str, weight: int) -> Optional[Dict]:
     :param weight: The weight for the hinter.
     :type weight: int
     :return: The dictionary of the HTTP response from the connection request.
-    :rtype: Dict
+    :rtype: Dict, optional
     """
 
     _assert_success(
@@ -736,7 +747,7 @@ def upload_attributes(
     :param attributes_filepath: The attributes filepath.
     :type attributes_filepath: str
     :return: The dictionary of the HTTP response from the connection request.
-    :rtype: Dict
+    :rtype: Dict, optional
     """
     conn = _get_conn()
     with open(attributes_filepath, encoding="utf-8") as attributes_file:
@@ -764,7 +775,7 @@ def load_attributes(
     :param attributes_filename: The attributes filename.
     :type attributes_filename: str
     :return: The dictionary of the HTTP response from the connection request.
-    :rtype: Dict
+    :rtype: Dict, optional
     """
 
     return api("attributes", id=dataset_id, file=attributes_filename)
@@ -777,7 +788,7 @@ def _dump(offset: int) -> Optional[Dict]:
     :param offset: The offset chunk.
     :type offset: int
     :return: The dictionary of the HTTP response from the connection request.
-    :rtype: Dict
+    :rtype: Dict, optional
     """
 
     return api("dump", offset=offset)
@@ -831,7 +842,7 @@ def hint(name: str, offset: int, values: List[bool]) -> Optional[Dict]:
     :param values: The hints.
     :type values: List[bool]
     :return: The dictionary of the HTTP response from the connection request.
-    :rtype: Dict
+    :rtype: Dict, optional
 
     TODO: Come up with a better streaming Python API here.
     """
@@ -848,7 +859,7 @@ def apply_hints(name: str) -> Optional[Dict]:
     :param name: The hinter name.
     :type name: str
     :return: The dictionary of the HTTP response from the connection request.
-    :rtype: Dict
+    :rtype: Dict, optional
     """
 
     _assert_success(api("apply_hints", name=name))
@@ -865,7 +876,7 @@ def hint_all(name: str, values: List[bool]) -> Optional[Dict]:
     :param values: The hints.
     :type values: List[bool]
     :return: The dictionary of the HTTP response from the connection request.
-    :rtype: Dict
+    :rtype: Dict, optional
     """
 
     hint(name, 0, values)
@@ -954,7 +965,7 @@ def export_async() -> Optional[Dict]:
     response is likely not updated yet.
 
     :return: The dictionary of the HTTP response from the connection request.
-    :rtype: Dict
+    :rtype: Dict, optional
     """
 
     return api("export", query="", content_type="text/csv")
@@ -965,7 +976,7 @@ def export() -> Optional[Dict]:
     This function exports the dataset and returns an updated HTTP response.
 
     :return: The dictionary of the HTTP response from the connection request.
-    :rtype: Dict
+    :rtype: Dict, optional
     """
 
     n_exports = len(get()["exports"])
@@ -982,7 +993,7 @@ def export_preview(mode: str = "ftc") -> Optional[Dict]:
         "ner", defaults to "ftc".
     :type mode: str, optional
     :return: The dictionary of the HTTP response from the connection request.
-    :rtype: Dict
+    :rtype: Dict, optional
     """
 
     return api("export_preview", mode=mode)
@@ -1007,8 +1018,8 @@ def create_dataset(
     :param has_header: The boolean indicating if the csv dataset has a header,
         defaults to True.
     :type has_header: bool, optional
-    :return: The dictionary of the HTTP response from the connection request.
-    :rtype: Dict
+    :return: The dataset id.
+    :rtype: str
 
     TODO: Add error handling.
     """
@@ -1079,7 +1090,7 @@ def config_set(key: str, value: str) -> Optional[Dict]:
     :param value: The parameter value.
     :type value: str
     :return: The dictionary of the HTTP response from the connection request.
-    :rtype: Dict
+    :rtype: Dict, optional
     """
 
     conn = _get_conn()
@@ -1097,7 +1108,7 @@ def config() -> Optional[Dict]:
     ``remote``, ``username``, ``role`` and ``authorization`` and their values.
 
     :return: A dictionary of key value pairs
-    :rtype: dict
+    :rtype: Dict, optional
     """
 
     conn = _get_conn()
@@ -1114,7 +1125,7 @@ def set_hub_url(url: str) -> Optional[Dict]:
     :param url: The Watchful hub URL.
     :type url: str
     :return: The dictionary of the HTTP response from the connection request.
-    :rtype: dict
+    :rtype: Dict, optional
     """
     conn = _get_conn()
     conn.request("POST", "/set_hub_url", url, {"Content-Type": "text/plain"})
@@ -1193,7 +1204,7 @@ def hub_api(verb: str, token: str, **args: Dict) -> Optional[Dict]:
     :param args: Optional parameters to support the hub API for ``verb``.
     :type args: Dict
     :return: The dictionary of the HTTP response from the connection request.
-    :rtype: Dict
+    :rtype: Dict, optional
     """
 
     headers = {"Content-Type": "application/json"}
@@ -1214,7 +1225,7 @@ def login(email: str, password: str) -> Optional[Dict]:
     :param password: The user's password.
     :type password: str
     :return: The dictionary of the HTTP response from the connection request.
-    :rtype: Dict
+    :rtype: Dict, optional
     """
 
     headers = {"Content-Type": "application/json"}
@@ -1234,7 +1245,7 @@ def publish(token: Optional[str] = None) -> Optional[Dict]:
     :param token: The user's auth token, defaults to None.
     :type token: str, optional
     :return: The dictionary of the HTTP response from the connection request.
-    :rtype: Dict
+    :rtype: Dict, optional
     """
 
     return hub_api("publish", token)
@@ -1247,7 +1258,7 @@ def fetch(token: Optional[str] = None) -> Optional[Dict]:
     :param token: The user's auth token, defaults to None.
     :type token: str, optional
     :return: The dictionary of the HTTP response from the connection request.
-    :rtype: Dict
+    :rtype: Dict, optional
     """
 
     return hub_api("fetch", token)
@@ -1260,7 +1271,7 @@ def pull(token: Optional[str] = None) -> Optional[Dict]:
     :param token: The user's auth token, defaults to None.
     :type token: str, optional
     :return: The dictionary of the HTTP response from the connection request.
-    :rtype: Dict
+    :rtype: Dict, optional
     """
 
     return hub_api("pull", token)
@@ -1273,7 +1284,7 @@ def push(token: Optional[str] = None) -> Optional[Dict]:
     :param token: The user's auth token, defaults to None.
     :type token: str, optional
     :return: The dictionary of the HTTP response from the connection request.
-    :rtype: Dict
+    :rtype: Dict, optional
     """
 
     return hub_api("push", token)
@@ -1286,7 +1297,7 @@ def peek(token: Optional[str] = None) -> Optional[Dict]:
     :param token: The user's auth token, defaults to None.
     :type token: str, optional
     :return: The dictionary of the HTTP response from the connection request.
-    :rtype: Dict
+    :rtype: Dict, optional
     """
 
     return hub_api("peek", token)
@@ -1299,7 +1310,7 @@ def whoami(token: Optional[str] = None) -> Optional[Dict]:
     :param token: The user's auth token, defaults to None.
     :type token: str, optional
     :return: The dictionary of the HTTP response from the connection request.
-    :rtype: Dict
+    :rtype: Dict, optional
     """
 
     return hub_api("whoami", token)
