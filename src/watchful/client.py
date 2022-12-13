@@ -258,7 +258,8 @@ def ephemeral(port: str = "9002") -> None:
     """
 
     _ = spawn_cmd(
-        f"watchful -p {port} --no-persistence >watchful_ephemeral_output.txt 2>&1"
+        f"watchful -p {port} --no-persistence "
+        f">watchful_ephemeral_output.txt 2>&1"
     )
     await_port_opening(int(port))
     external(port=port)
@@ -504,8 +505,11 @@ def col_flag(flag: str, columns: List[bool]) -> Optional[Dict]:
     """
     This function sets a flag for all the columns in the list.
 
-    :param flag: "inferenceable" is currently the only supported flag
-    :param columns: list of true/false values, specifying whether the flag should be set for the column
+    :param flag: "inferenceable" is currently the only supported flag.
+    :type flag: str
+    :param columns: A List of true/false values, specifying whether the flag
+        should be set for the column.
+    :type columns: List
     :return: The dictionary of the HTTP response from the connection request.
     :rtype: Dict, optional
     """
