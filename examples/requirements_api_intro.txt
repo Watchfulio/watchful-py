@@ -85,7 +85,7 @@ setuptools==65.5.0
 six==1.16.0
 smart-open==5.2.1
 soupsieve==2.3.2.post1
-spacy==3.4.2
+spacy==3.4.3
 spacy-legacy==3.0.10
 spacy-loggers==1.0.3
 spacytextblob==4.0.0
