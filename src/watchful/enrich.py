@@ -396,8 +396,9 @@ def main(args: List[str] = None, custom_enricher: Enricher = None) -> None:
         # Example usage:
         # curl -iX POST http://localhost:9001/api \
         #   --header "Content-Type: application/json" \
-        #   --data '{"verb":"attributes","id":"9570b0b5-4a58-445f-9b51-b434caca2650",
-        #         "filepath":"/path/to/attributes_file.attrs"}'
+        #   --data "{\"verb\":\"attributes\",\
+        # \"id\":\"9570b0b5-4a58-445f-9b51-b434caca2650\",\
+        # \"filepath\":\"/path/to/attributes_file.attrs\"}"
         # Arguments:
         #     id: dataset id
         #     filepath: attributes filepath
