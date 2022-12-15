@@ -1,5 +1,5 @@
 """
-Utils for tests for Watchful SDK.
+This script is a utility for Watchful SDK tests.
 """
 ################################################################################
 

@@ -310,7 +310,7 @@ jobs:
           name: "Test SDK"
           command: |
             echo Testing SDK in profile << parameters.profile >>...
-            python3 tests/test_001.py --test_env << parameters.profile >>
+            python3 tests/test_* --test_env << parameters.profile >>
             python3 -m pytest -W ignore::DeprecationWarning tests/test_*.py --test_env << parameters.profile >>
 
   publish-sdk:
