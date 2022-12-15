@@ -206,9 +206,8 @@ def _read_response(
     # One idea:
     # if ret["error_msg"]:
     #     raise Exception(ret["error_msg"])
-    # Another idea:
-    # if "error_msg" in ret and ret["error_msg"]:
-    #     print(ret["error_msg"])
+    if "error_msg" in ret and ret["error_msg"]:
+        print(f'{ret["error_verb"]}: {ret["error_msg"]}')
 
     return ret
 
