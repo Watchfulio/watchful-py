@@ -16,7 +16,7 @@ import subprocess
 import sys
 import time
 import urllib
-from typing import Callable, Dict, Generator, List, Optional, Union
+from typing import Callable, Dict, Generator, List, Literal, Optional, Union
 from uuid import uuid4
 
 
@@ -501,19 +501,97 @@ def records(csv_: str) -> Optional[Dict]:
     return api("records", data=csv_, content_type="text/csv")
 
 
-def col_flag(flag: str, columns: List[bool]) -> Optional[Dict]:
+def _col_flag(
+    columns: List[bool],
+    flag: Literal["inferenceable"] = "inferenceable",
+) -> Optional[Dict]:
     """
-    This function sets a flag for all the columns in the list.
+    This function sets a flag for each of the columns of the dataset in the
+    currently active project.
 
-    :param flag: "inferenceable" is currently the only supported flag.
-    :type flag: str
-    :param columns: A List of true/false values, specifying whether the flag
-        should be set for the column.
+    :param columns: A list of true/false values, specifying whether the flag
+        should be set for each column.
     :type columns: List
+    :param flag: The flag to be set; "inferenceable" is currently the only
+        supported flag.
+    :type flag: str, optional
     :return: The dictionary of the HTTP response from the connection request.
     :rtype: Dict, optional
     """
+
     return api("col_flag", flag=flag, columns=columns)
+
+
+def set_col_flag(
+    columns: Optional[List[str]] = None,
+    flag: Literal["inferenceable"] = "inferenceable",
+    pos_sense: bool = True,
+) -> Optional[Dict]:
+    """
+    This function sets a flag for each of the columns of the dataset in the
+    currently active project. As a default, given columns will be set to
+    ``True`` and all other columns will be set to ``False``. A helper to
+    indicate all available columns as given is to omit ``columns``.
+
+    :param flag: The flag to be set; "inferenceable" is currently the only
+        supported flag.
+    :type flag: str, optional
+    :param columns: A list of column names specifying whether the flag should
+        be set.
+    :type columns: List, optional
+    :param pos_sense: A boolean specifying whether the setting of the flag
+        is in positive or negative sense.
+    :type pos_sense: bool, optional
+    :return: The dictionary of the HTTP response from the connection request.
+    :rtype: Dict, optional
+    """
+
+    col_names = get()["field_names"]
+    n_col_names = len(col_names)
+
+    if columns is None:
+        col_bools = [pos_sense] * n_col_names
+    else:
+        n_columns = len(columns)
+
+        assert (
+            len(set(columns)) == n_columns
+        ), f"At least one of the given columns in {columns} is duplicate!"
+        assert len(set(columns) - set(col_names)) == 0, (
+            f"At least one of the given columns in {columns} is not available "
+            f"in the dataset columns {col_names}!"
+        )
+
+        def __f(x):
+            i = x in columns
+            return i if pos_sense else not i
+
+        col_bools = list(map(__f, col_names))
+
+    return _col_flag(col_bools, flag)
+
+
+def ignore_col_flag(
+    columns: Optional[List[str]] = None,
+    flag: Literal["inferenceable"] = "inferenceable",
+) -> Optional[Dict]:
+    """
+    This function sets a flag for each of the columns of the dataset in the
+    currently active project. Given columns will be set to ``False`` and all
+    other columns will be set to ``True``. A helper to indicate all available
+    columns as given is to omit ``columns``.
+
+    :param flag: The flag to be set; "inferenceable" is currently the only
+        supported flag.
+    :type flag: str, optional
+    :param columns: A list of column names specifying whether the flag should
+        be set to ``False``.
+    :type columns: List, optional
+    :return: The dictionary of the HTTP response from the connection request.
+    :rtype: Dict, optional
+    """
+
+    return set_col_flag(columns, flag, False)
 
 
 def class_(class__: str) -> Optional[Dict]:
