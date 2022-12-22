@@ -207,7 +207,7 @@ def _read_response(
     # if ret["error_msg"]:
     #     raise Exception(ret["error_msg"])
     if "error_msg" in ret and ret["error_msg"]:
-        print(ret["error_msg"])
+        print(f'{ret["error_verb"]}: {ret["error_msg"]}')
 
     return ret
 
@@ -1260,14 +1260,14 @@ def exit_backend() -> None:
     """
     This function exits the backend. Note that the API call will usually fail
     because the backend exits before returning a HTTP response so we suppress
-    the error. This is an old API function wrapper and will not be applicable to
-    the dockerized Watchful application instances.
+    the error. This is useful locally, for tests, and during development, but
+    not in dockerized Watchful application instances.
     """
 
     try:
         api("exit")
-    # We allowing passing this error as it is known.
-    except http.client.RemoteDisconnected:
+    # see docstring above
+    except (http.client.RemoteDisconnected, http.client.IncompleteRead):
         pass
 
 
