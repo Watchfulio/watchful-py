@@ -109,7 +109,7 @@ typer==0.7.0
 typing_extensions==4.4.0
 urllib3==1.26.13
 wasabi==0.10.1
-watchful==1.1.4
+watchful==1.1.8
 wcwidth==0.2.5
 wheel==0.37.1
 widgetsnbextension==4.0.3
