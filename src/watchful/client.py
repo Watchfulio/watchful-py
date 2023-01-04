@@ -1098,6 +1098,49 @@ def export_project() -> http.client.HTTPResponse:
     return resp
 
 
+def is_utf8(
+    filepath: str,
+    threshold: float = 0.5,
+    is_fast: bool = True,
+) -> Literal[-1, 0, 1]:
+    """
+    This function attempts to detect if the encoding of the file contents of the
+    given filepath is utf-8. It returns -1 if the detected encoding has a
+    confidence lower than the given threshold, otherwise 0 if the encoding is
+    not utf-8 or 1 if it is. This function may need some tweaking for a very
+    large dataset, but should work with the ``is_fast`` argument set to True by
+    default. This function is suitable to be invoked prior to invoking
+    :func:`create_dataset` or :func:`records`, if you need more confidence on
+    the encoding of your dataset being utf-8.
+
+    :param filepath: The path of the csv dataset file.
+    :type filepath: str
+    :param threshold: The minimum confidence required to accept the detected
+        encoding.
+    :type threshold: float
+    :param is_fast: Whether to use fast encoding detection with a lower
+        accuracy, or not.
+    :type is_fast: bool
+    :return: -1 if the detected encoding has a confidence lower than the given
+        threshold, otherwise 0 if the encoding is not utf-8 or 1 if it is.
+    :rtype: int, optional
+    """
+
+    if is_fast:
+        import cchardet as chardet
+    else:
+        import chardet
+
+    with open(filepath, "rb") as f:
+        res = chardet.detect(f.read())
+
+    if res["confidence"] < threshold:
+        return -1
+    if res["encoding"].lower() == "utf-8":
+        return 1
+    return 0
+
+
 def create_dataset(
     csv_bytes: bytes,
     columns: List[str],
