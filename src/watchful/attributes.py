@@ -630,7 +630,7 @@ def enrich_row(row: Dict[Optional[str], Optional[str]]) -> List[EnrichedCell]:
 def adjust_span_offsets_from_char_to_byte(
     cell: str,
     enriched_cell: EnrichedCell,
-) -> None:
+) -> EnrichedCell:
     """
     This function adjusts all the spans of an enriched cell from character
     offsets to byte offsets, since Watchful's data enrichment API takes in byte
@@ -641,6 +641,9 @@ def adjust_span_offsets_from_char_to_byte(
     :type cell: str
     :param enriched_cell: A list of attributes for the cell.
     :type enriched_cell: EnrichedCell
+    :return: The list of attributes for the cell whose span offsets have been
+        adjusted.
+    :rtype: EnrichedCell
     """
 
     byte_offsets = {}
@@ -656,6 +659,8 @@ def adjust_span_offsets_from_char_to_byte(
         for i, span in enumerate(spans):
             (start, end) = span
             spans[i] = (byte_offsets[start], byte_offsets[end])
+
+    return enriched_cell
 
 
 def init_args(*args) -> None:
