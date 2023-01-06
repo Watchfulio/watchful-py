@@ -1080,6 +1080,19 @@ def export_preview(mode: str = "ftc") -> Optional[Dict]:
 
     return api("export_preview", mode=mode)
 
+def export_project() -> http.client.HTTPResponse:
+    """
+    This function returns a consolidated version (a single *.hints file) of the
+    currently open project.
+    """
+
+    conn = _get_conn()
+    conn.request(
+        "GET",
+        "/export_project")
+    resp = conn.getresponse()
+    assert 200 == int(resp.status), f"Request failed with status {resp.status}."
+    return resp
 
 def create_dataset(
     csv_bytes: bytes,
