@@ -1084,6 +1084,9 @@ def export_project() -> http.client.HTTPResponse:
     """
     This function returns a consolidated version (a single *.hints file) of the
     currently open project.
+
+    :return:  The HTTP response from the connection request.
+    :rtype: http.client.HTTPResponse
     """
 
     conn = _get_conn()
