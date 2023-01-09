@@ -13,7 +13,7 @@ import pprint
 import re
 from heapq import merge
 from multiprocessing import Pool
-from typing import Callable, Dict, List, Optional, Tuple, Union
+from typing import Callable, Dict, List, Literal, Optional, Tuple, Union
 import psutil
 from watchful import client
 
@@ -591,6 +591,39 @@ def load_flair() -> Tuple:
     return (tagger.predict, Sentence)
 
 
+def set_enrich_fn_order(
+    enrich_fn: Callable = None,
+    order: Literal["row", "col"] = "row",
+) -> Callable:
+    """
+    This function annotates a data enrichment function with an attribute that
+    indicates the order of the data enrichment. Currently, the allowed orders
+    are "row" and "col".
+
+    :param enrich_fn: The data enrichment function, defaults to None.
+    :type enrich_fn: Callable
+    :param order: The data enrichment order; currently the allowed orders are
+        "row" and "col", defaults to "row".
+    :type order: str
+    :return: The list of enriched cell values in the row.
+    :rtype: Callable
+    """
+
+    assert order in ["row", "col"], (
+        f'The enrichment order "{order}" is unrecognized; use either "row" or'
+        f' "col".'
+    )
+
+    def __set_enrich_fn_order(enrich_fn):
+        enrich_fn.order = order
+        return enrich_fn
+
+    if enrich_fn is None:
+        return __set_enrich_fn_order
+    return __set_enrich_fn_order(enrich_fn)
+
+
+@set_enrich_fn_order()
 def enrich_row(row: Dict[Optional[str], Optional[str]]) -> List[EnrichedCell]:
     """
     This function enriches one row. It takes named cells of an input row and
@@ -685,6 +718,46 @@ def init_args(*args) -> None:
 def enrich(
     in_file: str,
     out_file: str,
+    enrich_row_or_col_fn: Callable,
+    enrichment_args: Tuple,
+) -> None:
+    """
+    This function enriches a dataset, using an enrichment function that enriches
+    either row by row or column by column and other enrichment objects, and then
+    produces the attributes.
+
+    :param in_file: The filepath of the csv formatted original dataset or the
+        dataset exported from Watchful. This latter will be the former appended
+        with the Watchful columns "Hints" and "HandLabels". It follows that
+        these columns are reserved for Watchful and should not be present in the
+        original dataset.
+    :type in_file: str
+    :param out_file: The filepath where the enriched attributes in Watchful
+        custom format for ingestion by Watchful application are written to.
+    :type out_file: str
+    :param enrich_row_or_col_fn: The user custom function for enriching every
+        row or every column of the dataset.
+    :type enrich_row_or_col_fn: Callable
+    :param enrichment_args: The additional enrichment objects to perform the
+        data enrichment.
+    :type enrichment_args: Tuple
+    """
+
+    order = enrich_row_or_col_fn.order
+    if order == "row":
+        enrich_by_row(in_file, out_file, enrich_row_or_col_fn, enrichment_args)
+    elif order == "col":
+        enrich_by_col(in_file, out_file, enrich_row_or_col_fn, enrichment_args)
+    else:
+        raise ValueError(
+            f'The enrichment order "{order}" is unrecognized; use either "row"'
+            f' or "col".'
+        )
+
+
+def enrich_by_row(
+    in_file: str,
+    out_file: str,
     enrich_row_fn: Callable,
     enrichment_args: Tuple,
 ) -> None:
@@ -751,6 +824,106 @@ def enrich(
         else:
             init_args(*enrichment_args)
             for enriched_row in map(enrich_row_fn, in_reader):
+                proc_enriched_row(enriched_row)
+
+        del ATTR_WRITER
+
+
+def enrich_by_col(
+    in_file: str,
+    out_file: str,
+    enrich_col_fn: Callable,
+    enrichment_args: Tuple,
+) -> None:
+    """
+    This function enriches a dataset, using an enrichment function that enriches
+    column by column and other enrichment objects, and then produces the
+    attributes.
+
+    :param in_file: The filepath of the csv formatted original dataset or the
+        dataset exported from Watchful. This latter will be the former appended
+        with the Watchful columns "Hints" and "HandLabels". It follows that
+        these columns are reserved for Watchful and should not be present in the
+        original dataset.
+    :type in_file: str
+    :param out_file: The filepath where the enriched attributes in Watchful
+        custom format for ingestion by Watchful application are written to.
+    :type out_file: str
+    :param enrich_col_fn: The user custom function for enriching every column of
+        the dataset.
+    :type enrich_col_fn: Callable
+    :param enrichment_args: The additional enrichment objects to perform the
+        data enrichment.
+    :type enrichment_args: Tuple
+    """
+
+    with open(in_file, encoding="utf-8", newline="") as infile:
+        in_reader = csv.reader(infile)
+        col_names = next(in_reader)
+        n_cols = len(col_names)
+        n_rows = None
+        for n_rows, _ in enumerate(in_reader, 1):
+            pass
+
+    with open(out_file, "w", encoding="utf-8") as outfile:
+
+        def __row_reader_to_col_reader(col_names, in_file):
+            def __get_col(col_name, in_reader):
+                return col_name, map(lambda row: row[col_name], in_reader)
+
+            for col_name in col_names:
+                with open(in_file, encoding="utf-8", newline="") as infile:
+                    in_reader = csv.DictReader(infile)
+                    yield __get_col(col_name, in_reader)
+
+        def __enriched_cols_to_enriched_rows(enriched_cols, n_rows):
+            def __get_row(i):
+                return map(lambda enriched_col: enriched_col[i], enriched_cols)
+
+            for i in range(n_rows):
+                yield __get_row(i)
+
+        in_reader = __row_reader_to_col_reader(col_names, in_file)
+
+        global ATTR_WRITER
+        ATTR_WRITER = writer(outfile, n_rows, n_cols)
+
+        if IS_MULTIPROC:
+            # Parallelize to the number of available cores (not the number of
+            # available hyper threads). ``psutil`` is the only standard Python
+            # package that can provide this measure (with logical=False).
+            # Testing revealed wall times to be quite close to using all logical
+            # CPUs, with better overall system responsiveness and less thermal
+            # throttling in this scenario.
+            # Additionally, as Python's threading uses a GIL, it is unsuitable
+            # for this task. Use its multiprocessing intsead. However,
+            # multiprocessing uses pickle and is unable to send functions across
+            # process boundaries, hence the global variable set by the
+            # initializer.
+            with Pool(
+                initializer=init_args,
+                initargs=enrichment_args,
+                processes=psutil.cpu_count(logical=False),
+            ) as pool:
+                for enriched_row in __enriched_cols_to_enriched_rows(
+                    # Put into memory for speed, but may need to trade-off speed
+                    # for memory when the dataset is large, by storing into
+                    # persistent storage.
+                    list(
+                        pool.imap(
+                            func=enrich_col_fn,
+                            iterable=in_reader,
+                            chunksize=MULTIPROC_CHUNKSIZE,
+                        )
+                    ),
+                    n_rows,
+                ):
+                    proc_enriched_row(enriched_row)
+        else:
+            init_args(*enrichment_args)
+            for enriched_row in __enriched_cols_to_enriched_rows(
+                list(map(enrich_col_fn, in_reader)), n_rows
+            ):
                 proc_enriched_row(enriched_row)
 
         del ATTR_WRITER
@@ -833,6 +1006,7 @@ def get_vars_for_enrich_row_with_attribute_data(
     return get_attr_row, attr_name_list, attr_reader
 
 
+@set_enrich_fn_order()
 def enrich_row_with_attribute_data(
     row: Dict[Optional[str], Optional[str]],
 ) -> List[EnrichedCell]:
