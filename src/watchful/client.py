@@ -195,7 +195,7 @@ def _read_response(
     :rtype: Dict, optional
     """
     # the assertion is here because that's what our API endpoints always return
-    assert 200 == int(resp.status)
+    assert 200 == resp.status
     json_str = resp.read()
 
     if resp_is_summary and API_SUMMARY_HOOK_CALLBACK:
@@ -999,7 +999,7 @@ def export_stream(
         + urllib.parse.quote_plus(mode),
     )
     resp = conn.getresponse()
-    assert 200 == int(resp.status), f"Request failed with status {resp.status}."
+    assert 200 == resp.status, f"Request failed with status {resp.status}."
     return resp
 
 
@@ -1084,7 +1084,8 @@ def export_preview(mode: str = "ftc") -> Optional[Dict]:
 def export_project() -> http.client.HTTPResponse:
     """
     This function returns a consolidated version (a single *.hints file) of the
-    currently open project.
+    currently open project. Unlike other GET endpoints that return a summary
+    object, this function returns a streamed file, the *.hints project file.
 
     :return:  The HTTP response from the connection request.
     :rtype: http.client.HTTPResponse
@@ -1093,7 +1094,7 @@ def export_project() -> http.client.HTTPResponse:
     conn = _get_conn()
     conn.request("GET", "/export_project")
     resp = conn.getresponse()
-    assert 200 == int(resp.status), f"Request failed with status {resp.status}."
+    assert 200 == resp.status, f"Request failed with status {resp.status}."
     return resp
 
 
