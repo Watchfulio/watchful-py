@@ -1099,20 +1099,21 @@ def export_project() -> http.client.HTTPResponse:
 
 
 def is_utf8(
-    filepath: str,
+    csv_bytes: bytes = None,
+    filepath: str = None,
     threshold: float = 0.5,
     is_fast: bool = True,
 ) -> bool:
     """
-    This function attempts to detect if the encoding of the file content of the
-    given filepath is utf-8. It returns `True` if the detected encoding is utf-8
-    and has a confidence of the given threshold or more, otherwise `False`. This
-    function may need some tweaking for a very large dataset, but should work
-    with the ``is_fast`` argument set to `True` by default. This function is
-    suitable to be invoked prior to invoking :func:`create_dataset` or
-    :func:`records`, if you need more confidence on the encoding of your dataset
-    being utf-8.
+    This function attempts to detect if the encoding of the given bytes or the
+    content of the given filepath is utf-8. It returns `True` if the detected
+    encoding is utf-8 and has a confidence of the given threshold or more,
+    otherwise `False`. This function may need some tweaking for a very large
+    dataset, but should work with the ``is_fast`` argument set to `True` by
+    default.
 
+    :param csv_bytes: The csv dataset bytes.
+    :type csv_bytes: bytes
     :param filepath: The path of the csv dataset file.
     :type filepath: str
     :param threshold: The minimum confidence required to accept the detected
@@ -1125,14 +1126,32 @@ def is_utf8(
         the given threshold or more, otherwise `False`.
     :rtype: bool
     """
+    if csv_bytes is None and filepath is None:
+        raise Exception(
+            "Both filepath and csv_bytes are not specified. "
+            "One of them needs to be specified."
+        )
+    if csv_bytes and filepath:
+        raise Exception(
+            "Both filepath and csv_bytes are specified. "
+            "Only one of them needs to be specified."
+        )
 
     if is_fast:
         import cchardet as chardet
     else:
         import chardet
 
-    with open(filepath, "rb") as f:
-        res = chardet.detect(f.read())
+    if csv_bytes:
+        res = chardet.detect(csv_bytes)
+    else:
+        if os.path.isfile(filepath):
+            with open(filepath, "rb") as f:
+                res = chardet.detect(f.read())
+        else:
+            raise Exception(
+                f"There is no file at the given file path {filepath}!"
+            )
 
     if res["encoding"].lower() == "utf-8" and res["confidence"] >= threshold:
         return True
@@ -1144,10 +1163,14 @@ def create_dataset(
     columns: List[str],
     filename: str = "none",
     has_header: bool = True,
+    threshold_detect: float = 0.5,
+    is_fast_detect: bool = True,
+    force_load: bool = False,
 ) -> str:
     """
     This function loads the specified columns of a csv dataset and returns the
-    dataset id.
+    dataset id if its encoding is detected to be utf-8 or if dataset loading is
+    forced.
 
     :param csv_bytes: The csv dataset bytes.
     :type csv_bytes: bytes
@@ -1158,34 +1181,56 @@ def create_dataset(
     :param has_header: The boolean indicating if the csv dataset has a header,
         defaults to True.
     :type has_header: bool, optional
+    :param threshold_detect: The minimum confidence required to accept the
+        detected encoding.
+    :type threshold_detect: float, optional
+    :param is_fast_detect: Whether to use fast encoding detection with a lower
+        accuracy, or not.
+    :type is_fast_detect: bool, optional
+    :param force_load: The boolean indicating if the csv dataset will be loaded
+        even when its encoding is detected to be non-utf-8, defaults to False.
+        This is useful in rare cases where the csv dataset is detected to be
+        non-utf-8 encoded and the user is sure about the csv dataset being utf-8
+        encoded.
+    :type force_load: bool, optional
     :return: The dataset id.
     :rtype: str
 
     TODO: Add error handling.
     """
 
-    id_ = str(uuid4())
-    conn = _get_conn()
-    conn.request(
-        "POST",
-        "/api/_stream/" + id_ + "/0/true",
-        csv_bytes,
-        {"Content-Type": "text/csv"},
+    is_csv_bytes_utf8 = is_utf8(
+        csv_bytes, None, threshold_detect, is_fast_detect
     )
-    _ = _read_response(conn.getresponse())
 
-    params = json.dumps({"filename": filename, "has_header": has_header})
-    conn.request(
-        "POST",
-        "/api/_stream/" + id_,
-        params,
-        {"Content-Type": "application/json"},
+    if is_csv_bytes_utf8 or force_load:
+        id_ = str(uuid4())
+        conn = _get_conn()
+        conn.request(
+            "POST",
+            "/api/_stream/" + id_ + "/0/true",
+            csv_bytes,
+            {"Content-Type": "text/csv"},
+        )
+        _ = _read_response(conn.getresponse())
+
+        params = json.dumps({"filename": filename, "has_header": has_header})
+        conn.request(
+            "POST",
+            "/api/_stream/" + id_,
+            params,
+            {"Content-Type": "application/json"},
+        )
+        dataset_id = _read_response(conn.getresponse())["id"]
+
+        api("dataset_add", id=dataset_id, columns=columns)
+
+        return dataset_id
+
+    raise Exception(
+        "Dataset is not loaded as the encoding of the csv dataset is not "
+        "detected to be utf-8 and dataset loading is not forced."
     )
-    dataset_id = _read_response(conn.getresponse())["id"]
-
-    api("dataset_add", id=dataset_id, columns=columns)
-
-    return dataset_id
 
 
 def label_single(row: List[str]) -> List[str]:
