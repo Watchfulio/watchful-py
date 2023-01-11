@@ -501,7 +501,7 @@ def records(csv_: str) -> Optional[Dict]:
     return api("records", data=csv_, content_type="text/csv")
 
 
-def _col_flag(
+def _column_flag(
     columns: List[bool],
     flag: Literal["inferenceable"] = "inferenceable",
 ) -> Optional[Dict]:
@@ -519,10 +519,10 @@ def _col_flag(
     :rtype: Dict, optional
     """
 
-    return api("col_flag", flag=flag, columns=columns)
+    return api("column_flag", flag=flag, columns=columns)
 
 
-def set_col_flag(
+def set_column_flag(
     columns: Optional[List[str]] = None,
     flag: Literal["inferenceable"] = "inferenceable",
     pos_sense: bool = True,
@@ -568,10 +568,10 @@ def set_col_flag(
 
         col_bools = list(map(__f, col_names))
 
-    return _col_flag(col_bools, flag)
+    return _column_flag(col_bools, flag)
 
 
-def ignore_col_flag(
+def ignore_column_flag(
     columns: Optional[List[str]] = None,
     flag: Literal["inferenceable"] = "inferenceable",
 ) -> Optional[Dict]:
@@ -591,7 +591,7 @@ def ignore_col_flag(
     :rtype: Dict, optional
     """
 
-    return set_col_flag(columns, flag, False)
+    return set_column_flag(columns, flag, False)
 
 
 def class_(class__: str) -> Optional[Dict]:
