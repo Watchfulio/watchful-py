@@ -5,6 +5,8 @@ pyflakes==2.4.0
 pylama==8.3.8
 pylint==2.15.5
 twine==4.0.1
+cchardet==2.1.7
+chardet==5.1.0
 flair==0.11.3
 psutil==5.9.2
 spacy==3.4.3

@@ -16,6 +16,7 @@ orbs:
   # paste it everywhere.
   # See: https://circleci.com/developer/orbs/orb/circleci/python
   python: circleci/python@2.0.3
+  slack: circleci/slack@4.10.1
 
 
 executors:
@@ -342,6 +343,41 @@ jobs:
               exit 1
             fi
 
+  send-slack-notification:
+    parameters:
+      executor_tag:
+        description: "The Python env that the executor uses"
+        type: string
+        default: "3.8.12"
+    executor:
+      name: linux-python
+      tag: << parameters.executor_tag >>
+    steps:
+      - slack/notify:
+          event: always
+          custom: |
+            {
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": "New SDK Release! ${CIRCLE_TAG:1} :tada:",
+                    "emoji": true
+                  }
+                },
+                {
+                  "type": "section",
+                  "fields": [
+                    {
+                      "type": "mrkdwn",
+                      "text": "More info:\nhttps://github.com/Watchfulio/watchful-py/releases/tag/$CIRCLE_TAG\nhttps://pypi.org/project/watchful/${CIRCLE_TAG:1}/"
+                    }
+                  ]
+                }
+              ]
+            }
+
 
 # Invoke jobs via workflows.
 # See: https://circleci.com/docs/2.0/configuration-reference/#workflows
@@ -537,4 +573,11 @@ workflows:
           filters:
             tags:
               only: /^v\d+\.\d+\.\d+[a-z]*\d*$/
-
+      - send-slack-notification:
+          name: "Send Slack Notification"
+          executor_tag: "3.8.12"
+          requires:
+            - "Test PyPI SDK (Deploy)"
+          filters:
+            tags:
+              only: /^v\d+\.\d+\.\d+[a-z]*\d*$/
