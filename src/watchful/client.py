@@ -1176,7 +1176,7 @@ def create_dataset(
     :type csv_bytes: bytes
     :param columns: The list of column names to use.
     :type columns: List[str]
-    :param filename: The csv dataset filename, defaults to "none".
+    :param filename: The csv dataset filename, defaults to None.
     :type filename: str, optional
     :param has_header: The boolean indicating if the csv dataset has a header,
         defaults to True.
