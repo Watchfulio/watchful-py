@@ -1161,7 +1161,7 @@ def is_utf8(
 def create_dataset(
     csv_bytes: bytes,
     columns: List[str],
-    filename: str = "none",
+    filename: str = None,
     has_header: bool = True,
     threshold_detect: float = 0.5,
     is_fast_detect: bool = True,
