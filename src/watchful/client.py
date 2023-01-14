@@ -1161,11 +1161,11 @@ def is_utf8(
 def create_dataset(
     csv_bytes: bytes,
     columns: List[str],
-    filename: str = None,
+    filename: str = "none",
     has_header: bool = True,
     threshold_detect: float = 0.5,
     is_fast_detect: bool = True,
-    force_load: bool = False,
+    force_load: bool = True,
 ) -> str:
     """
     This function loads the specified columns of a csv dataset and returns the
@@ -1176,7 +1176,7 @@ def create_dataset(
     :type csv_bytes: bytes
     :param columns: The list of column names to use.
     :type columns: List[str]
-    :param filename: The csv dataset filename, defaults to None.
+    :param filename: The csv dataset filename, defaults to "none".
     :type filename: str, optional
     :param has_header: The boolean indicating if the csv dataset has a header,
         defaults to True.
@@ -1188,7 +1188,7 @@ def create_dataset(
         accuracy, or not.
     :type is_fast_detect: bool, optional
     :param force_load: The boolean indicating if the csv dataset will be loaded
-        even when its encoding is detected to be non-utf-8, defaults to False.
+        even when its encoding is detected to be non-utf-8, defaults to True.
         This is useful in rare cases where the csv dataset is detected to be
         non-utf-8 encoded and the user is sure about the csv dataset being utf-8
         encoded.
