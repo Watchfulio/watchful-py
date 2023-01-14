@@ -1161,7 +1161,7 @@ def is_utf8(
 def create_dataset(
     csv_bytes: bytes,
     columns: List[str],
-    filename: str = "none",
+    filename: str = None,
     has_header: bool = True,
     threshold_detect: float = 0.5,
     is_fast_detect: bool = True,
@@ -1176,7 +1176,7 @@ def create_dataset(
     :type csv_bytes: bytes
     :param columns: The list of column names to use.
     :type columns: List[str]
-    :param filename: The csv dataset filename, defaults to "none".
+    :param filename: The csv dataset filename, defaults to None.
     :type filename: str, optional
     :param has_header: The boolean indicating if the csv dataset has a header,
         defaults to True.
