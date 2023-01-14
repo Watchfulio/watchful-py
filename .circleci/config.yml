@@ -573,11 +573,13 @@ workflows:
           filters:
             tags:
               only: /^v\d+\.\d+\.\d+[a-z]*\d*$/
-      # - send-slack-notification:
-      #     name: "Send Slack Notification"
-      #     executor_tag: "3.8.12"
-      #     requires:
-      #       - "Test PyPI SDK (Deploy)"
-      #     filters:
-      #       tags:
-      #         only: /^v\d+\.\d+\.\d+[a-z]*\d*$/
+      - send-slack-notification:
+          name: "Send Slack Notification"
+          context:
+            - slack
+          executor_tag: "3.8.12"
+          requires:
+            - "Test PyPI SDK (Deploy)"
+          filters:
+            tags:
+              only: /^v\d+\.\d+\.\d+[a-z]*\d*$/
