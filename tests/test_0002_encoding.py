@@ -4,7 +4,6 @@ This script tests the csv encoding detection.
 ################################################################################
 
 from watchful import client
-import cchardet as chardet
 
 
 def test_ascii():
