@@ -1153,7 +1153,12 @@ def is_utf8(
                 f"There is no file at the given file path {filepath}!"
             )
 
-    if res["encoding"].lower() == "utf-8" and res["confidence"] >= threshold:
+    # Because cChardet likes to be specific with encoding,
+    # ASCII will be specified if the valid UTF-8 characters
+    # fit within that subset.
+    valid_encodings = ["utf-8", "ascii"]
+    enc = res["encoding"].lower()
+    if enc in valid_encodings and res["confidence"] >= threshold:
         return True
     return False
 
