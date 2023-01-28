@@ -22,7 +22,7 @@ filelock==3.8.0
 flair==0.11.3
 fonttools==4.38.0
 ftfy==6.1.1
-future==0.18.2
+future==0.18.3
 gdown==4.5.3
 gensim==4.3.0
 huggingface-hub==0.10.1
