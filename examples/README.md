@@ -37,7 +37,7 @@ python3 -m watchful.enrich [options]
 ```
 
 ## Requirements
-- Environment: The Python 3.8.12 environment is used to test the data enrichment. Generally, Python >=3.7 should work.
+- Environment: We recommend the Python 3.8.12 environment as it is used to build the SDK and run the data enrichment. Generally, Python >=3.7 and <=3.10.9 should work.
 - Install Watchful Python Package
 ```
 pip3 install watchful --upgrade
