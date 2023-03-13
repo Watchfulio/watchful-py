@@ -28,7 +28,7 @@ gensim==4.3.0
 huggingface-hub==0.10.1
 hyperopt==0.2.7
 idna==3.4
-importlib-metadata==5.0.0
+importlib-metadata==6.0.0
 ipykernel==5.3.4
 ipython==8.10.0
 ipython-genutils==0.2.0
