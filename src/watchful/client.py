@@ -7,7 +7,6 @@ Watchful client application.
 
 import base64
 import csv
-import http.client
 import io
 import json
 import os
@@ -18,10 +17,12 @@ import time
 import urllib
 from typing import Callable, Dict, Generator, List, Literal, Optional, Union
 from uuid import uuid4
+import requests
 
 
 HOST = "localhost"
 PORT = "9002"
+API_TIMEOUT_SEC = 600
 
 
 def _refresh() -> None:
@@ -35,16 +36,24 @@ def _refresh() -> None:
     print(f"watchful version: {watchful.__version__}")
 
 
-def _get_conn() -> http.client.HTTPConnection:
+def _get_conn_url(scheme: str = "http") -> str:
     """
-    This function creates the HTTP connection from the global
+    This function creates the HTTP connection url from the global
     ``HOST`` and ``PORT``.
 
-    :return: A ``http.client.HTTPConnection`` to ``HOST`` and ``PORT``.
-    :rtype: http.client.HTTPConnection
+    :param scheme: The protocol to use, either "http" or "https", defaults to
+        "http".
+    :type scheme: str
+    :return: The HTTP connection url.
+    :rtype: str
     """
 
-    return http.client.HTTPConnection(HOST + ":" + PORT)
+    assert scheme in [
+        "http",
+        "https",
+    ], '`scheme` must be either "http" or "https"!'
+
+    return f"{scheme}://{HOST}:{PORT}"
 
 
 def await_port_opening(port: int, timeout_sec: int = 10) -> None:
@@ -175,30 +184,30 @@ def register_summary_hook(function: Callable) -> None:
 
 
 def _read_response(
-    resp: http.client.HTTPResponse, resp_is_summary: bool = False
+    response: requests.models.Response, response_is_summary: bool = False
 ) -> Optional[Dict]:
     """
-    This function raises an exception if ``resp.status`` is not 200, otherwise
-    it returns ``ret``.
+    This function raises an exception if ``response.status_code`` is not 200,
+    otherwise it returns ``ret``.
 
-    If ``resp_is_summary`` then we will also run the
+    If ``response_is_summary`` then we will also run the
     ``API_SUMMARY_HOOK_CALLBACK`` (any hook that was provided), so this is only
     appropriate for endpoints that return a summary, that is, the /api endpoint
     rather than some other JSON object like /config, /remote, etc.
 
     :param resp: The HTTP response from a connection request.
-    :type resp: http.client.HTTPResponse
-    :param resp_is_summary: Boolean indicating if the response is known to be a
-        summary object.
-    :type resp_is_summary: bool, optional
+    :type resp: requests.models.Response
+    :param response_is_summary: Boolean indicating if the response is known to
+        be a summary object.
+    :type response_is_summary: bool, optional
     :return: The dictionary of ``resp``.
     :rtype: Dict, optional
     """
     # the assertion is here because that's what our API endpoints always return
-    assert 200 == resp.status
-    json_str = resp.read()
+    assert 200 == response.status_code
+    json_str = response.text
 
-    if resp_is_summary and API_SUMMARY_HOOK_CALLBACK:
+    if response_is_summary and API_SUMMARY_HOOK_CALLBACK:
         API_SUMMARY_HOOK_CALLBACK(json_str)
 
     ret = json.loads(json_str)
@@ -241,11 +250,14 @@ def api_send_action(action: Dict) -> Optional[Dict]:
     :rtype: Dict, optional
     """
 
-    conn = _get_conn()
-    conn.request(
-        "POST", "/api", json.dumps(action), {"Content-Type": "application/json"}
+    conn_url = _get_conn_url()
+    response = requests.post(
+        f"{conn_url}/api",
+        data=json.dumps(action),
+        headers={"Content-Type": "application/json"},
+        timeout=API_TIMEOUT_SEC,
     )
-    return _read_response(conn.getresponse(), resp_is_summary=True)
+    return _read_response(response, response_is_summary=True)
 
 
 def ephemeral(port: str = "9002") -> None:
@@ -288,11 +300,10 @@ def list_projects() -> Dict:
     :rtype: Dict
     """
 
-    c = _get_conn()
-    c.request("GET", "/projects")
-    r = c.getresponse()
+    conn_url = _get_conn_url()
+    response = requests.get(f"{conn_url}/projects", timeout=API_TIMEOUT_SEC)
 
-    return json.loads(r.read())
+    return json.loads(response.text)
 
 
 def open_project(id_: str) -> str:
@@ -306,16 +317,15 @@ def open_project(id_: str) -> str:
     :rtype: str
     """
 
-    c = _get_conn()
-    c.request(
-        "POST",
-        "/projects",
-        json.dumps(id_),
-        {"Content-Type": "application/json"},
+    conn_url = _get_conn_url()
+    response = requests.post(
+        f"{conn_url}/projects",
+        data=json.dumps(id_),
+        headers={"Content-Type": "application/json"},
+        timeout=API_TIMEOUT_SEC,
     )
-    r = c.getresponse()
 
-    ret = r.read().decode("utf-8")
+    ret = response.content.decode("utf-8")
     await_plabels()
 
     return ret
@@ -831,17 +841,18 @@ def upload_attributes(
     :return: The dictionary of the HTTP response from the connection request.
     :rtype: Dict, optional
     """
-    conn = _get_conn()
+    conn_url = _get_conn_url()
     with open(attributes_filepath, encoding="utf-8") as attributes_file:
-        conn.request(
-            "PUT",
-            f"/datasets/{dataset_id}/attributes",
-            attributes_file,
-            {"Content-Type": "text/plain"},
+        response = requests.put(
+            f"{conn_url}/datasets/{dataset_id}/attributes",
+            data=attributes_file,
+            headers={"Content-Type": "text/plain"},
+            timeout=API_TIMEOUT_SEC,
         )
-    resp = conn.getresponse()
-    assert resp.status == 200, f"not OK HTTP status. Was: {resp.status}"
-    return _assert_success(_read_response(resp))
+    assert (
+        response.status_code == 200
+    ), f"not OK HTTP status. Was: {response.status_code}"
+    return _assert_success(_read_response(response))
 
 
 def load_attributes(
@@ -969,7 +980,7 @@ def hint_all(name: str, values: List[bool]) -> Optional[Dict]:
 def export_stream(
     content_type: str = "text/csv",
     mode: str = "ftc",
-) -> http.client.HTTPResponse:
+) -> requests.models.Response:
     """
     This function begins the export using the export_stream call. The result is
     not JSON, but is data to be processed directly.
@@ -978,7 +989,7 @@ def export_stream(
     For NER mode, content_type must be application/jsonlines and mode
     must be ner.
 
-    On success, it returns the http.client.HTTPResponse object from which you
+    On success, it returns the requests.models.Response object from which you
     can read the data.
 
     :param content_type: The content type of the export, defaults to "text/csv".
@@ -987,20 +998,21 @@ def export_stream(
         defaults to "ftc".
     :type mode: str, optional
     :return: The HTTP response from the connection request.
-    :rtype: http.client.HTTPResponse
+    :rtype: requests.models.Response
     """
 
-    conn = _get_conn()
-    conn.request(
-        "GET",
-        "/export_stream?content-type="
-        + urllib.parse.quote_plus(content_type)
-        + "&mode="
-        + urllib.parse.quote_plus(mode),
+    conn_url = _get_conn_url()
+    _content_type = urllib.parse.quote_plus(content_type)
+    _mode = urllib.parse.quote_plus(mode)
+    response = requests.get(
+        f"{conn_url}/export_stream?content-type={_content_type}&mode={_mode}",
+        stream=True,
+        timeout=API_TIMEOUT_SEC,
     )
-    resp = conn.getresponse()
-    assert 200 == resp.status, f"Request failed with status {resp.status}."
-    return resp
+    assert (
+        200 == response.status_code
+    ), f"Request failed with status {response.status_code}."
+    return response
 
 
 def export_dataset_to_path(out_file: str, fields: List[str] = None) -> None:
@@ -1022,13 +1034,12 @@ def export_dataset_to_path(out_file: str, fields: List[str] = None) -> None:
         fields = get()["field_names"]
     n_cols = len(fields)
 
-    dataset_export_stream = export_stream()
     with open(out_file, "w", encoding="utf-8") as f:
         writer = csv.writer(f)
+        stream = export_stream().raw
+        stream.auto_close = False
         reader = csv.reader(
-            io.TextIOWrapper(
-                dataset_export_stream, encoding="utf-8", newline=""
-            )
+            io.TextIOWrapper(stream, encoding="utf-8", newline="")
         )
         header = next(reader)
         if header[:n_cols] != fields:
@@ -1081,21 +1092,24 @@ def export_preview(mode: str = "ftc") -> Optional[Dict]:
     return api("export_preview", mode=mode)
 
 
-def export_project() -> http.client.HTTPResponse:
+def export_project() -> requests.models.Response:
     """
     This function returns a consolidated version (a single *.hints file) of the
     currently open project. Unlike other GET endpoints that return a summary
     object, this function returns a streamed file, the *.hints project file.
 
     :return:  The HTTP response from the connection request.
-    :rtype: http.client.HTTPResponse
+    :rtype: requests.models.Response
     """
 
-    conn = _get_conn()
-    conn.request("GET", "/export_project")
-    resp = conn.getresponse()
-    assert 200 == resp.status, f"Request failed with status {resp.status}."
-    return resp
+    conn_url = _get_conn_url()
+    response = requests.get(
+        f"{conn_url}/export_project", timeout=API_TIMEOUT_SEC
+    )
+    assert (
+        200 == response.status_code
+    ), f"Request failed with status {response.status_code}."
+    return response
 
 
 def is_utf8(
@@ -1210,23 +1224,23 @@ def create_dataset(
 
     if is_csv_bytes_utf8 or force_load:
         id_ = str(uuid4())
-        conn = _get_conn()
-        conn.request(
-            "POST",
-            "/api/_stream/" + id_ + "/0/true",
-            csv_bytes,
-            {"Content-Type": "text/csv"},
+        conn_url = _get_conn_url()
+        response = requests.post(
+            f"{conn_url}/api/_stream/{id_}/0/true",
+            data=csv_bytes,
+            headers={"Content-Type": "text/csv"},
+            timeout=API_TIMEOUT_SEC,
         )
-        _ = _read_response(conn.getresponse())
+        _ = _read_response(response)
 
         params = json.dumps({"filename": filename, "has_header": has_header})
-        conn.request(
-            "POST",
-            "/api/_stream/" + id_,
-            params,
-            {"Content-Type": "application/json"},
+        response = requests.post(
+            f"{conn_url}/api/_stream/{id_}",
+            data=params,
+            headers={"Content-Type": "application/json"},
+            timeout=API_TIMEOUT_SEC,
         )
-        dataset_id = _read_response(conn.getresponse())["id"]
+        dataset_id = _read_response(response)["id"]
 
         api("dataset_add", id=dataset_id, columns=columns)
 
@@ -1248,16 +1262,20 @@ def label_single(row: List[str]) -> List[str]:
     :rtype: List[str]
     """
 
-    c = _get_conn()
+    conn_url = _get_conn_url()
     sio = io.StringIO()
     w = csv.writer(sio)
     w.writerow(row)
     csv_row = sio.getvalue().encode("utf-8")
     sio.close()
-    c.request("POST", "/label", csv_row, {"Content-Type": "text/csv"})
-    r = c.getresponse()
-    resp_body = r.read().decode("utf-8")
-    csv_str = io.StringIO(resp_body)
+    response = requests.post(
+        f"{conn_url}/label",
+        data=csv_row,
+        headers={"Content-Type": "text/csv"},
+        timeout=API_TIMEOUT_SEC,
+    )
+    response_body = response.content.decode("utf-8")
+    csv_str = io.StringIO(response_body)
     rdr = csv.reader(csv_str)
     rdr_list = list(rdr)
     if len(rdr_list) == 2:
@@ -1283,13 +1301,16 @@ def config_set(key: str, value: str) -> Optional[Dict]:
     :rtype: Dict, optional
     """
 
-    conn = _get_conn()
+    conn_url = _get_conn_url()
     params = json.dumps({"verb": "set", "key": key, "value": value})
-    conn.request(
-        "POST", "/config", params, {"Content-Type": "application/json"}
+    response = requests.post(
+        f"{conn_url}/config",
+        data=params,
+        headers={"Content-Type": "application/json"},
+        timeout=API_TIMEOUT_SEC,
     )
 
-    return _read_response(conn.getresponse())
+    return _read_response(response)
 
 
 def config() -> Optional[Dict]:
@@ -1301,10 +1322,15 @@ def config() -> Optional[Dict]:
     :rtype: Dict, optional
     """
 
-    conn = _get_conn()
-    conn.request("GET", "/config", None, {"Content-Type": "application/json"})
+    conn_url = _get_conn_url()
+    response = requests.get(
+        f"{conn_url}/config",
+        data=None,
+        headers={"Content-Type": "application/json"},
+        timeout=API_TIMEOUT_SEC,
+    )
 
-    return _read_response(conn.getresponse())
+    return _read_response(response)
 
 
 def set_hub_url(url: str) -> Optional[Dict]:
@@ -1317,9 +1343,14 @@ def set_hub_url(url: str) -> Optional[Dict]:
     :return: The dictionary of the HTTP response from the connection request.
     :rtype: Dict, optional
     """
-    conn = _get_conn()
-    conn.request("POST", "/set_hub_url", url, {"Content-Type": "text/plain"})
-    return _read_response(conn.getresponse())
+    conn_url = _get_conn_url()
+    response = requests.post(
+        f"{conn_url}/set_hub_url",
+        data=url,
+        headers={"Content-Type": "text/plain"},
+        timeout=API_TIMEOUT_SEC,
+    )
+    return _read_response(response)
 
 
 def print_candidates(summary: Optional[Dict] = None) -> None:
@@ -1375,7 +1406,7 @@ def exit_backend() -> None:
     try:
         api("exit")
     # see docstring above
-    except (http.client.RemoteDisconnected, http.client.IncompleteRead):
+    except requests.exceptions.ConnectionError:
         pass
 
 
@@ -1401,9 +1432,14 @@ def hub_api(verb: str, token: str, **args: Dict) -> Optional[Dict]:
     headers.update({"Authorization": "Bearer " + token})
     action = args  # already a dictionary
     action["verb"] = verb
-    conn = _get_conn()
-    conn.request("POST", "/remote", json.dumps(action), headers)
-    return _assert_success(_read_response(conn.getresponse()))
+    conn_url = _get_conn_url()
+    response = requests.post(
+        f"{conn_url}/remote",
+        data=json.dumps(action),
+        headers=headers,
+        timeout=API_TIMEOUT_SEC,
+    )
+    return _assert_success(_read_response(response))
 
 
 def login(email: str, password: str) -> Optional[Dict]:
@@ -1423,9 +1459,14 @@ def login(email: str, password: str) -> Optional[Dict]:
         "utf-8"
     )
     headers.update({"Authorization": f"Basic {credentials}"})
-    conn = _get_conn()
-    conn.request("POST", "/remote", json.dumps({"verb": "login"}), headers)
-    return _assert_success(_read_response(conn.getresponse()))
+    conn_url = _get_conn_url()
+    response = requests.post(
+        f"{conn_url}/remote",
+        data=json.dumps({"verb": "login"}),
+        headers=headers,
+        timeout=API_TIMEOUT_SEC,
+    )
+    return _assert_success(_read_response(response))
 
 
 def publish(token: Optional[str] = None) -> Optional[Dict]:
