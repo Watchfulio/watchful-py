@@ -33,15 +33,28 @@ def test_version(test_env: str) -> None:
         raise ValueError(f"No such environment: {test_env}")
 
 
-def test_connection() -> None:
-    conn = client._get_conn()
-    assert str(client.PORT).isnumeric(), f"{client.PORT} is not numeric!"
-    assert conn.host == str(
-        client.HOST
-    ), f"The default host ({conn.host} != {client.HOST}) is incorrect!"
-    assert conn.port == int(
-        client.PORT
-    ), f"The default port ({conn.port} != {client.PORT}) is incorrect!"
+def test_connection(test_env: str) -> None:
+    if test_env in ["dev", "deploy"]:
+        conn_url = client._get_conn_url()
+        host, port = conn_url.split("://")[1].split(":")
+        assert str(client.PORT).isnumeric(), f"{client.PORT} is not numeric!"
+        assert host == str(
+            client.HOST
+        ), f"The default host ({host} != {client.HOST}) is incorrect!"
+        assert port == str(
+            client.PORT
+        ), f"The default port ({port} != {client.PORT}) is incorrect!"
+    elif test_env == "prod":
+        conn = client._get_conn()  # pylint: disable=protected-access
+        assert str(client.PORT).isnumeric(), f"{client.PORT} is not numeric!"
+        assert conn.host == str(
+            client.HOST
+        ), f"The default host ({conn.host} != {client.HOST}) is incorrect!"
+        assert conn.port == int(
+            client.PORT
+        ), f"The default port ({conn.port} != {client.PORT}) is incorrect!"
+    else:
+        raise ValueError(f"No such environment: {test_env}")
 
 
 def _get_package_name() -> str:
@@ -69,6 +82,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     test_version(args.test_env)
-    test_connection()
+    test_connection(args.test_env)
 
     sys.exit(0)
