@@ -38,8 +38,7 @@ def test_connection(test_env: str) -> None:
         conn_url = client._get_conn_url()
         scheme, host_port = conn_url.split("://")
         host, port = (
-            host_port.split(":") if client.PORT else host_port,
-            client.PORT,
+            host_port.split(":") if client.PORT else (host_port, client.PORT)
         )
         assert (
             scheme == client.SCHEME
