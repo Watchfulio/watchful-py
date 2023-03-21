@@ -20,9 +20,10 @@ from uuid import uuid4
 import requests
 
 
-HOST = "localhost"
-PORT = "9002"
-API_TIMEOUT_SEC = 600
+SCHEME: Literal["http", "https"] = "http"
+HOST: str = "localhost"
+PORT: Optional[str] = "9002"
+API_TIMEOUT_SEC: int = 600
 
 
 def _refresh() -> None:
@@ -36,24 +37,21 @@ def _refresh() -> None:
     print(f"watchful version: {watchful.__version__}")
 
 
-def _get_conn_url(scheme: str = "http") -> str:
+def _get_conn_url() -> str:
     """
-    This function creates the HTTP connection url from the global
+    This function creates the HTTP connection url from the global ``SCHEME``,
     ``HOST`` and ``PORT``.
 
-    :param scheme: The protocol to use, either "http" or "https", defaults to
-        "http".
-    :type scheme: str
     :return: The HTTP connection url.
     :rtype: str
     """
 
-    assert scheme in [
+    assert SCHEME in [
         "http",
         "https",
-    ], '`scheme` must be either "http" or "https"!'
+    ], '`SCHEME` must be either "http" or "https"!'
 
-    return f"{scheme}://{HOST}:{PORT}"
+    return f"{SCHEME}://{HOST}:{PORT}" if PORT else f"{SCHEME}://{HOST}"
 
 
 def await_port_opening(port: int, timeout_sec: int = 10) -> None:
@@ -204,7 +202,9 @@ def _read_response(
     :rtype: Dict, optional
     """
     # the assertion is here because that's what our API endpoints always return
-    assert 200 == response.status_code
+    assert (
+        200 == response.status_code
+    ), f"Request could have failed with status {response.status_code}."
     json_str = response.text
 
     if response_is_summary and API_SUMMARY_HOOK_CALLBACK:
@@ -277,17 +277,27 @@ def ephemeral(port: str = "9002") -> None:
     external(port=port)
 
 
-def external(host: str = "localhost", port: str = "9001") -> None:
+def external(
+    host: str = "localhost", port: str = "9001", scheme: str = "http"
+) -> None:
     """
-    This function changes the global ``HOST`` abd ``PORT`` values.
+    This function changes the global ``HOST``, ``PORT`` and ``SCHEME`` values.
 
     :param host: The host, defaults to "localhost".
     :type host: str, optional
     :param port: The port, defaults to "9001".
     :type port: str, optional
+    :param scheme: The scheme, either "http" or "https", defaults to "http".
+    :type scheme: str, optional
     """
 
-    global HOST, PORT
+    assert scheme in [
+        "http",
+        "https",
+    ], '`scheme` must be either "http" or "https"!'
+
+    global SCHEME, HOST, PORT
+    SCHEME = scheme
     HOST = host
     PORT = port
 
@@ -851,7 +861,7 @@ def upload_attributes(
         )
     assert (
         response.status_code == 200
-    ), f"not OK HTTP status. Was: {response.status_code}"
+    ), f"Request could have failed with status {response.status_code}."
     return _assert_success(_read_response(response))
 
 
@@ -1011,7 +1021,7 @@ def export_stream(
     )
     assert (
         200 == response.status_code
-    ), f"Request failed with status {response.status_code}."
+    ), f"Request could have failed with status {response.status_code}."
     return response
 
 
@@ -1108,7 +1118,7 @@ def export_project() -> requests.models.Response:
     )
     assert (
         200 == response.status_code
-    ), f"Request failed with status {response.status_code}."
+    ), f"Request could have failed with status {response.status_code}."
     return response
 
 
