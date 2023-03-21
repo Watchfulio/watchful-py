@@ -202,7 +202,9 @@ def _read_response(
     :rtype: Dict, optional
     """
     # the assertion is here because that's what our API endpoints always return
-    assert 200 == response.status_code
+    assert (
+        200 == response.status_code
+    ), f"Request could have failed with status {response.status_code}."
     json_str = response.text
 
     if response_is_summary and API_SUMMARY_HOOK_CALLBACK:
@@ -849,7 +851,7 @@ def upload_attributes(
         )
     assert (
         response.status_code == 200
-    ), f"not OK HTTP status. Was: {response.status_code}"
+    ), f"Request could have failed with status {response.status_code}."
     return _assert_success(_read_response(response))
 
 
@@ -1009,7 +1011,7 @@ def export_stream(
     )
     assert (
         200 == response.status_code
-    ), f"Request failed with status {response.status_code}."
+    ), f"Request could have failed with status {response.status_code}."
     return response
 
 
@@ -1106,7 +1108,7 @@ def export_project() -> requests.models.Response:
     )
     assert (
         200 == response.status_code
-    ), f"Request failed with status {response.status_code}."
+    ), f"Request could have failed with status {response.status_code}."
     return response
 
 
