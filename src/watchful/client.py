@@ -20,9 +20,10 @@ from uuid import uuid4
 import requests
 
 
-HOST = "localhost"
-PORT = "9002"
-API_TIMEOUT_SEC = 600
+SCHEME: Literal["http", "https"] = "http"
+HOST: str = "localhost"
+PORT: Optional[str] = "9002"
+API_TIMEOUT_SEC: int = 600
 
 
 def _refresh() -> None:
@@ -36,24 +37,21 @@ def _refresh() -> None:
     print(f"watchful version: {watchful.__version__}")
 
 
-def _get_conn_url(scheme: str = "http") -> str:
+def _get_conn_url() -> str:
     """
-    This function creates the HTTP connection url from the global
+    This function creates the HTTP connection url from the global ``SCHEME``,
     ``HOST`` and ``PORT``.
 
-    :param scheme: The protocol to use, either "http" or "https", defaults to
-        "http".
-    :type scheme: str
     :return: The HTTP connection url.
     :rtype: str
     """
 
-    assert scheme in [
+    assert SCHEME in [
         "http",
         "https",
-    ], '`scheme` must be either "http" or "https"!'
+    ], '`SCHEME` must be either "http" or "https"!'
 
-    return f"{scheme}://{HOST}:{PORT}"
+    return f"{SCHEME}://{HOST}:{PORT}" if PORT else f"{SCHEME}://{HOST}"
 
 
 def await_port_opening(port: int, timeout_sec: int = 10) -> None:
