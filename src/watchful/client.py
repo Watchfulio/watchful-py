@@ -277,17 +277,27 @@ def ephemeral(port: str = "9002") -> None:
     external(port=port)
 
 
-def external(host: str = "localhost", port: str = "9001") -> None:
+def external(
+    host: str = "localhost", port: str = "9001", scheme: str = "http"
+) -> None:
     """
-    This function changes the global ``HOST`` abd ``PORT`` values.
+    This function changes the global ``HOST``, ``PORT`` and ``SCHEME`` values.
 
     :param host: The host, defaults to "localhost".
     :type host: str, optional
     :param port: The port, defaults to "9001".
     :type port: str, optional
+    :param scheme: The scheme, either "http" or "https", defaults to "http".
+    :type scheme: str, optional
     """
 
-    global HOST, PORT
+    assert scheme in [
+        "http",
+        "https",
+    ], '`scheme` must be either "http" or "https"!'
+
+    global SCHEME, HOST, PORT
+    SCHEME = scheme
     HOST = host
     PORT = port
 
