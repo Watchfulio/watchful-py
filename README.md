@@ -39,9 +39,9 @@ w.__version__
 
 ### Basic Enrichment
 
-The Watchful SDK aims to make enrichment a straight-forward task. The following step assume a brand new user without any projects.
+The Watchful SDK aims to make enrichment a straight-forward task. The following steps assume a brand new user without any projects.
 
-- Ensure you have the correct version of python, `spacey` models etc
+- Ensure you have the proper python version and environment setup. Follow the [environment setup guide](https://github.com/Watchfulio/watchful-py/blob/main/README_PY_ENV.md) for more details.
 - Open the Watchful App
 - Create a new Project
 - Import a dataset into your project
