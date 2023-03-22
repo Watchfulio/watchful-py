@@ -58,6 +58,8 @@ The Watchful SDK aims to make enrichment a straight-forward task. The following 
 > **Note:**
 > A more comprehensive guide to enrichment is available in the [enrichment introduction notebook](https://github.com/Watchfulio/watchful-py/blob/main/examples/enrichment_intro.ipynb).
 
+For more guides and documentation, see the [ReadMe document](https://github.com/Watchfulio/watchful-py/blob/main/examples/README.md) in the `examples` directory.
+
 ## Steps (Development)
 
 ### Create Python Enviroment
