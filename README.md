@@ -1,13 +1,13 @@
 # Watchful Python Package for Interacting with Watchful Environment
 
 ## Overview
-The Watchful Python Package allows installation of the Watchful Python SDK over the internet from PyPI. The Watchful Python SDK enables communication with the Watchful API using Python and helps in the automation of Watchful Python features when used with the product. 
+The Watchful Python Package allows installation of the Watchful Python SDK over the internet from PyPI. The Watchful Python SDK enables communication with the Watchful API using Python and helps in the automation of Watchful Python features when used with the product.
 
 The current features include the following and their corresponding user guides:
 - Watchful API and [notebook](https://github.com/Watchfulio/watchful-py/blob/main/examples/api_intro.ipynb)
-<!---
+
 - [Data Enrichment](https://github.com/Watchfulio/watchful-py/blob/main/examples/README.md) and [notebook](https://github.com/Watchfulio/watchful-py/blob/main/examples/enrichment_intro.ipynb)
---->
+
 
 ## Steps (Use)
 
@@ -15,13 +15,48 @@ The current features include the following and their corresponding user guides:
 - Refer [here](https://github.com/Watchfulio/watchful-py/blob/main/README_PY_ENV.md) for options.
 
 ### Install Watchful Python SDK from PyPI (Recommended)
+
 If you want to use Python to communicate with the Watchful API, you'll need to install the Watchful Python SDK from PyPI.
 
 - Install your desired release version (they can be found at [PyPI](https://pypi.org/project/watchful/))
+
 ```command
 pip3 install watchful[==your.desired.version]
 ```
-- Go through Watchful API introduction [notebook](https://github.com/Watchfulio/watchful-py/blob/main/examples/api_intro.ipynb).
+
+### Basic Usage
+
+Once you have installed the SDK, import it and begin interacting with it.
+
+```python
+import watchful as w
+w.__version__    # This prints the SDK version, for example "2.3.0".
+```
+
+> **Note**:
+> For a more thorough Watchful API introduction, read through our [API Introduction Jupyter Notebook](https://github.com/Watchfulio/watchful-py/blob/main/examples/api_intro.ipynb).
+
+### Basic Enrichment
+
+The Watchful SDK aims to make enrichment a straight-forward task. The following steps assume a brand new user without any projects.
+
+- Ensure you have the proper Python version and environment setup. Follow the [environment setup guide](https://github.com/Watchfulio/watchful-py/blob/main/README_PY_ENV.md) for more details.
+- Open the Watchful App
+- Create a new Project
+- Import a dataset into your Project
+- Install the latest Watchful SDK from PyPI
+  - `python3 -m pip install watchful`
+- Install spaCy
+  - `python3 -m pip install spacy`
+- Install spaCy's `en_core_web_sm` model
+  - `python -m spacy download en_core_web_sm`
+- Enrich your currently opened Watchful project’s dataset via terminal window:
+  - `python3 -m watchful.enrich --host localhost --port 9001`&nbsp;&nbsp;&nbsp;&nbsp;`# Enter your actual host and port.`
+
+> **Note: Enrich via Jupyter Notebook**
+> \- A more comprehensive guide to enrichment is available in the [Enrichment Introduction Jupyter Notebook](https://github.com/Watchfulio/watchful-py/blob/main/examples/enrichment_intro.ipynb).
+
+For more guides and documentation, see the [ReadMe](https://github.com/Watchfulio/watchful-py/blob/main/examples/README.md) in the `examples` directory.
 
 ## Steps (Development)
 
