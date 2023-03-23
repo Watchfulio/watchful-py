@@ -26,39 +26,37 @@ pip3 install watchful[==your.desired.version]
 
 ### Basic Usage
 
-Once you have installed the SDK, import it and begin interacting with it
+Once you have installed the SDK, import it and begin interacting with it.
 
 ```python
 import watchful as w
-w.__version__
-#2.3.0
+w.__version__    # This prints the SDK version, for example "2.3.0".
 ```
 
 > **Note**:
-> For more thorough Watchful API introduction, read through our [introduction notebook](https://github.com/Watchfulio/watchful-py/blob/main/examples/api_intro.ipynb).
+> For a more thorough Watchful API introduction, read through our [API Introduction Jupyter Notebook](https://github.com/Watchfulio/watchful-py/blob/main/examples/api_intro.ipynb).
 
 ### Basic Enrichment
 
 The Watchful SDK aims to make enrichment a straight-forward task. The following steps assume a brand new user without any projects.
 
-- Ensure you have the proper python version and environment setup. Follow the [environment setup guide](https://github.com/Watchfulio/watchful-py/blob/main/README_PY_ENV.md) for more details.
+- Ensure you have the proper Python version and environment setup. Follow the [environment setup guide](https://github.com/Watchfulio/watchful-py/blob/main/README_PY_ENV.md) for more details.
 - Open the Watchful App
 - Create a new Project
-- Import a dataset into your project
-- Open a terminal window
-- Install the Watchful SDK from PyPI
-  - `python3 -m pip install "watchful==2.3.0"`
-- Ensure you have `spacy` installed
-  - `brew install spacy`
-- Ensure you have the `en_core_web_sm` model installed
+- Import a dataset into your Project
+- Install the latest Watchful SDK from PyPI
+  - `python3 -m pip install watchful`
+- Install spaCy
+  - `python3 -m pip install spacy`
+- Install spaCy's `en_core_web_sm` model
   - `python -m spacy download en_core_web_sm`
-- Enrich your currently opened Watchful project’s dataset
-  - `python3 -m watchful.enrich --host "localhost" --port 9001`
+- Enrich your currently opened Watchful project’s dataset via terminal window:
+  - `python3 -m watchful.enrich --host localhost --port 9001`&nbsp;&nbsp;&nbsp;&nbsp;`# Enter your actual host and port.`
 
-> **Note:**
-> A more comprehensive guide to enrichment is available in the [enrichment introduction notebook](https://github.com/Watchfulio/watchful-py/blob/main/examples/enrichment_intro.ipynb).
+> **Note: Enrich via Jupyter Notebook**
+> \- A more comprehensive guide to enrichment is available in the [Enrichment Introduction Jupyter Notebook](https://github.com/Watchfulio/watchful-py/blob/main/examples/enrichment_intro.ipynb).
 
-For more guides and documentation, see the [ReadMe document](https://github.com/Watchfulio/watchful-py/blob/main/examples/README.md) in the `examples` directory.
+For more guides and documentation, see the [ReadMe](https://github.com/Watchfulio/watchful-py/blob/main/examples/README.md) in the `examples` directory.
 
 ## Steps (Development)
 
