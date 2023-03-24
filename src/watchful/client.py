@@ -221,20 +221,45 @@ def _read_response(
     return ret
 
 
-def api(verb: str, **args: Dict) -> Optional[Dict]:
+def request(
+    method: str = "GET", path: str = "/", **kwargs: Dict
+) -> requests.models.Response:
+    """
+    This is a wrapper function for API calls; made up of the API method, path
+    and optional keyword arguments.
+
+    :param method: The API method string in uppercase.
+    :type method: str
+    :param kwargs: Optional parameters to include in the API call.
+    :type kwargs: Dict
+    :return: The HTTP response from the connection request.
+    :rtype: requests.models.Response
+    """
+
+    methods = ["GET", "POST", "PUT"]
+    assert (
+        method in methods
+    ), f"{method} is not one of the currently implemented methods: {methods}!"
+
+    return getattr(requests, method.lower())(
+        f"{_get_conn_url()}{path}", **kwargs
+    )
+
+
+def api(verb: str, **kwargs: Dict) -> Optional[Dict]:
     """
     This is a convenience function for API calls; made up of a verb and optional
     keyword arguments.
 
     :param verb: The verb for the API.
     :type verb: str
-    :param args: Optional parameters to support the API for ``verb``.
-    :type args: Dict
+    :param kwargs: Optional parameters to support the API for ``verb``.
+    :type kwargs: Dict
     :return: The dictionary of the HTTP response from the connection request.
     :rtype: Dict, optional
     """
 
-    action = args  # already a dictionary
+    action = kwargs  # already a dictionary
     action["verb"] = verb
 
     return api_send_action(action)
@@ -250,13 +275,13 @@ def api_send_action(action: Dict) -> Optional[Dict]:
     :rtype: Dict, optional
     """
 
-    conn_url = _get_conn_url()
-    response = requests.post(
-        f"{conn_url}/api",
-        data=json.dumps(action),
-        headers={"Content-Type": "application/json"},
-        timeout=API_TIMEOUT_SEC,
-    )
+    fields = {
+        "data": json.dumps(action),
+        "headers": {"Content-Type": "application/json"},
+        "timeout": API_TIMEOUT_SEC,
+    }
+    response = request("POST", "/api", **fields)
+
     return _read_response(response, response_is_summary=True)
 
 
@@ -310,8 +335,7 @@ def list_projects() -> Dict:
     :rtype: Dict
     """
 
-    conn_url = _get_conn_url()
-    response = requests.get(f"{conn_url}/projects", timeout=API_TIMEOUT_SEC)
+    response = request("GET", "/projects", timeout=API_TIMEOUT_SEC)
 
     return json.loads(response.text)
 
@@ -327,9 +351,9 @@ def open_project(id_: str) -> str:
     :rtype: str
     """
 
-    conn_url = _get_conn_url()
-    response = requests.post(
-        f"{conn_url}/projects",
+    response = request(
+        "POST",
+        "/projects",
         data=json.dumps(id_),
         headers={"Content-Type": "application/json"},
         timeout=API_TIMEOUT_SEC,
@@ -851,17 +875,20 @@ def upload_attributes(
     :return: The dictionary of the HTTP response from the connection request.
     :rtype: Dict, optional
     """
-    conn_url = _get_conn_url()
+
     with open(attributes_filepath, encoding="utf-8") as attributes_file:
-        response = requests.put(
-            f"{conn_url}/datasets/{dataset_id}/attributes",
+        response = request(
+            "PUT",
+            f"/datasets/{dataset_id}/attributes",
             data=attributes_file,
             headers={"Content-Type": "text/plain"},
             timeout=API_TIMEOUT_SEC,
         )
+
     assert (
         response.status_code == 200
     ), f"Request could have failed with status {response.status_code}."
+
     return _assert_success(_read_response(response))
 
 
@@ -1011,17 +1038,19 @@ def export_stream(
     :rtype: requests.models.Response
     """
 
-    conn_url = _get_conn_url()
     _content_type = urllib.parse.quote_plus(content_type)
     _mode = urllib.parse.quote_plus(mode)
-    response = requests.get(
-        f"{conn_url}/export_stream?content-type={_content_type}&mode={_mode}",
+    response = request(
+        "GET",
+        f"/export_stream?content-type={_content_type}&mode={_mode}",
         stream=True,
         timeout=API_TIMEOUT_SEC,
     )
+
     assert (
         200 == response.status_code
     ), f"Request could have failed with status {response.status_code}."
+
     return response
 
 
@@ -1112,13 +1141,12 @@ def export_project() -> requests.models.Response:
     :rtype: requests.models.Response
     """
 
-    conn_url = _get_conn_url()
-    response = requests.get(
-        f"{conn_url}/export_project", timeout=API_TIMEOUT_SEC
-    )
+    response = request("GET", "/export_project", timeout=API_TIMEOUT_SEC)
+
     assert (
         200 == response.status_code
     ), f"Request could have failed with status {response.status_code}."
+
     return response
 
 
@@ -1234,9 +1262,9 @@ def create_dataset(
 
     if is_csv_bytes_utf8 or force_load:
         id_ = str(uuid4())
-        conn_url = _get_conn_url()
-        response = requests.post(
-            f"{conn_url}/api/_stream/{id_}/0/true",
+        response = request(
+            "POST",
+            f"/api/_stream/{id_}/0/true",
             data=csv_bytes,
             headers={"Content-Type": "text/csv"},
             timeout=API_TIMEOUT_SEC,
@@ -1244,8 +1272,9 @@ def create_dataset(
         _ = _read_response(response)
 
         params = json.dumps({"filename": filename, "has_header": has_header})
-        response = requests.post(
-            f"{conn_url}/api/_stream/{id_}",
+        response = request(
+            "POST",
+            f"/api/_stream/{id_}",
             data=params,
             headers={"Content-Type": "application/json"},
             timeout=API_TIMEOUT_SEC,
@@ -1272,14 +1301,14 @@ def label_single(row: List[str]) -> List[str]:
     :rtype: List[str]
     """
 
-    conn_url = _get_conn_url()
     sio = io.StringIO()
     w = csv.writer(sio)
     w.writerow(row)
     csv_row = sio.getvalue().encode("utf-8")
     sio.close()
-    response = requests.post(
-        f"{conn_url}/label",
+    response = request(
+        "POST",
+        "/label",
         data=csv_row,
         headers={"Content-Type": "text/csv"},
         timeout=API_TIMEOUT_SEC,
@@ -1311,10 +1340,10 @@ def config_set(key: str, value: str) -> Optional[Dict]:
     :rtype: Dict, optional
     """
 
-    conn_url = _get_conn_url()
     params = json.dumps({"verb": "set", "key": key, "value": value})
-    response = requests.post(
-        f"{conn_url}/config",
+    response = request(
+        "POST",
+        "/config",
         data=params,
         headers={"Content-Type": "application/json"},
         timeout=API_TIMEOUT_SEC,
@@ -1332,9 +1361,9 @@ def config() -> Optional[Dict]:
     :rtype: Dict, optional
     """
 
-    conn_url = _get_conn_url()
-    response = requests.get(
-        f"{conn_url}/config",
+    response = request(
+        "GET",
+        "/config",
         data=None,
         headers={"Content-Type": "application/json"},
         timeout=API_TIMEOUT_SEC,
@@ -1353,13 +1382,14 @@ def set_hub_url(url: str) -> Optional[Dict]:
     :return: The dictionary of the HTTP response from the connection request.
     :rtype: Dict, optional
     """
-    conn_url = _get_conn_url()
-    response = requests.post(
-        f"{conn_url}/set_hub_url",
+    response = request(
+        "POST",
+        "/set_hub_url",
         data=url,
         headers={"Content-Type": "text/plain"},
         timeout=API_TIMEOUT_SEC,
     )
+
     return _read_response(response)
 
 
@@ -1423,7 +1453,7 @@ def exit_backend() -> None:
 ## Hub API
 
 
-def hub_api(verb: str, token: str, **args: Dict) -> Optional[Dict]:
+def hub_api(verb: str, token: str, **kwargs: Dict) -> Optional[Dict]:
     """
     This is a convenience function for collaboration API calls with Watchful;
     made up of a verb, a token and optional keyword arguments.
@@ -1432,19 +1462,19 @@ def hub_api(verb: str, token: str, **args: Dict) -> Optional[Dict]:
     :type verb: str
     :param verb: The user's auth token.
     :type token: str
-    :param args: Optional parameters to support the hub API for ``verb``.
-    :type args: Dict
+    :param kwargs: Optional parameters to support the hub API for ``verb``.
+    :type kwargs: Dict
     :return: The dictionary of the HTTP response from the connection request.
     :rtype: Dict, optional
     """
 
     headers = {"Content-Type": "application/json"}
     headers.update({"Authorization": "Bearer " + token})
-    action = args  # already a dictionary
+    action = kwargs  # already a dictionary
     action["verb"] = verb
-    conn_url = _get_conn_url()
-    response = requests.post(
-        f"{conn_url}/remote",
+    response = request(
+        "POST",
+        "/remote",
         data=json.dumps(action),
         headers=headers,
         timeout=API_TIMEOUT_SEC,
@@ -1469,13 +1499,14 @@ def login(email: str, password: str) -> Optional[Dict]:
         "utf-8"
     )
     headers.update({"Authorization": f"Basic {credentials}"})
-    conn_url = _get_conn_url()
-    response = requests.post(
-        f"{conn_url}/remote",
+    response = request(
+        "POST",
+        "/remote",
         data=json.dumps({"verb": "login"}),
         headers=headers,
         timeout=API_TIMEOUT_SEC,
     )
+
     return _assert_success(_read_response(response))
 
 
