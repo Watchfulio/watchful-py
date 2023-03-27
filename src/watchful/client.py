@@ -20,6 +20,7 @@ from uuid import uuid4
 import requests
 
 
+THIS_DIR_PATH = os.path.dirname(os.path.abspath(__file__))
 SCHEME: Literal["http", "https"] = "http"
 HOST: str = "localhost"
 PORT: Optional[str] = "9002"
@@ -230,6 +231,8 @@ def request(
 
     :param method: The API method string in uppercase.
     :type method: str
+    :param path: The path string after the hostname and port.
+    :type path: str
     :param kwargs: Optional parameters to include in the API call.
     :type kwargs: Dict
     :return: The HTTP response from the connection request.
@@ -240,6 +243,19 @@ def request(
     assert (
         method in methods
     ), f"{method} is not one of the currently implemented methods: {methods}!"
+
+    default_headers = {}
+    version_filepath = os.path.join(THIS_DIR_PATH, "VERSION")
+    with open(version_filepath, encoding="utf-8") as f:
+        version = f.readline()
+        default_headers.update({"x-watchful-sdk": version})
+
+    headers = kwargs.get("headers", {})
+    if headers == {}:
+        headers.update(default_headers)
+        kwargs["headers"] = headers
+    else:
+        headers.update(default_headers)
 
     return getattr(requests, method.lower())(
         f"{_get_conn_url()}{path}", **kwargs
