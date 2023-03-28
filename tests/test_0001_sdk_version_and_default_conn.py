@@ -11,6 +11,7 @@ import sys
 import watchful
 from watchful import client
 
+
 THIS_DIR_PATH = os.path.dirname(os.path.abspath(__file__))
 
 
@@ -34,7 +35,7 @@ def test_version(test_env: str) -> None:
 
 
 def test_connection(test_env: str) -> None:
-    if test_env in ["dev", "deploy"]:
+    if test_env in ["dev", "prod", "deploy"]:
         conn_url = client._get_conn_url()
         scheme, host_port = conn_url.split("://")
         host, port = (
@@ -50,15 +51,6 @@ def test_connection(test_env: str) -> None:
         assert (
             port == client.PORT
         ), f"The default port ({port} != {client.PORT}) is incorrect!"
-    elif test_env == "prod":
-        conn = client._get_conn()  # pylint: disable=protected-access
-        assert client.PORT.isnumeric(), f"{client.PORT} is not numeric!"
-        assert (
-            conn.host == client.HOST
-        ), f"The default host ({conn.host} != {client.HOST}) is incorrect!"
-        assert conn.port == int(
-            client.PORT
-        ), f"The default port ({conn.port} != {client.PORT}) is incorrect!"
     else:
         raise ValueError(f"No such environment: {test_env}")
 
