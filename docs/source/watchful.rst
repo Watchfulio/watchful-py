@@ -1,7 +1,7 @@
-watchful package
+Watchful Package
 ================
 
-Submodules
+Modules
 ----------
 
 .. toctree::
@@ -12,7 +12,7 @@ Submodules
    watchful.enrich
    watchful.enricher
 
-Module contents
+Package Contents
 ---------------
 
 .. automodule:: watchful
