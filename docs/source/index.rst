@@ -15,11 +15,11 @@ asdf
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
+   :caption: Contents
 
    install.rst
    usage.rst
-   modules
+   modules.rst
 
 
 
