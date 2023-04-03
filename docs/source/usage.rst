@@ -23,16 +23,16 @@ Example Implementation
 
         w.external(host, port)
 
-We can varify the connection by calling ``w.get()``. After you've connected to your hosted Watchful application instance, call this function any time you want to check on it's status. If everything works, you'll see the `ProjectSummary` returned.
+We can verify the connection by calling ``w.get()``. After you've connected to your hosted Watchful application instance, call this function any time you want to check on it's status. If everything works, you'll see the `ProjectSummary` returned.
 
 If you're not using the UI to manage your projects, and want to do everything using the API, you can create a new project with ``w.create_project()``. It will additionally be opened automatically, so you don't need to call ``w.open_project(...)``. You can give it a title with ``w.title("My Project")``. We will show this in a later section below.
 
 We recommend using the UI and the API at the same time, so you can connect to your hosted Watchful application via the API in a notebook or from plain Python, and at the same time also visualize your work in the UI.
 
-A walk-through of the API
+A Walk-through of the API
 -------------------------
 
-Now that you've connecte to a running Watchful application instance, let's take a look at the key parts of the API that are most commonly used.
+Now that you've connected to a running Watchful application instance, let's take a look at the key parts of the API that are most commonly used.
 
 .. automethod:: watchful.client.get
 
@@ -44,16 +44,13 @@ It's worth noting that:
 * The summary object is returned from every API call, not just ``w.get()``, so if you call any oher function that sends a request to your Watchful application, you'd always be returned with the summary object.
 * The fields of the summary object will always be there.
 
-It's also worth mentioning a couple of these fields that are especially useful.
+It's also worth mentioning a couple of these fields that are especially useful:
 
-The ``status`` field tells you whether the backend is doing work or not, and as we can see here it is "current", which is usually what you want.
-If it is "working", then the backend is still doing some work, and you can expect that some things may change.
-An example is creating a hinter, as we'll do below, when you can see that the ``summary`` object returns immediately with a status of "working", and the hinter is still in the progress of being fully applied to all the candidates in the background, at which point it will go back to "current".
+* The ``status`` field tells you whether the backend is doing work or not, and as we can see here it is "current", which is usually what you want. If it is "working", then the backend is still doing some work, and you can expect that some things may change. An example is creating a hinter, as we'll do below, when you can see that the ``summary`` object returns immediately with a status of "working", and the hinter is still in the progress of being fully applied to all the candidates in the background, at which point it will go back to "current".
 
-The ``error_msg`` field reports the error information if there is any error.
-If there is a value in this field, it means the API request did not succeed, so check this field when appropriate.
+* The ``error_msg`` field reports the error information if there is any error. If there is a value in this field, it means the API request did not succeed, so check this field when appropriate.
 
-To get a list of projects:
+Let's get the list of projects in your Watchful application instance.
 
 .. automethod:: watchful.client.list_projects
 
