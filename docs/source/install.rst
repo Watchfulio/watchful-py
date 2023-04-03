@@ -39,15 +39,14 @@ For this document, we'll use ``pyenv`` on a Mac.
 
 From this point, you can continue using your environment to install your Python packages and run your Python code.
 
-Install from PyPi
+Install from PyPI
 -----------------
 
-Install the latest published Watchful SDK. Add `--upgrade` if you currently have
-a previous Watchful SDK version installed.
+Install the latest published Watchful SDK.
 
 .. code-block:: python
 
-    # To get the latest published version
+    # Install the latest published Watchful SDK version. Add `--upgrade` if you currently have a previous version installed.
     pip3 install watchful [--upgrade]
 
     # Alternatively, install a specific Watchful SDK version if you need to.
@@ -56,8 +55,7 @@ a previous Watchful SDK version installed.
     # Show the installed Watchful SDK.
     pip3 show watchful
 
-After you've done the preceding steps correctly, you will be able to print the
-version of the installed Watchful SDK.
+After you've done the preceding steps correctly, you will be able to print the version of the installed Watchful SDK.
 
 .. code-block:: python
 
