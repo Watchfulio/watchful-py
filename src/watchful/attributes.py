@@ -13,9 +13,9 @@ import pprint
 import re
 from heapq import merge
 from multiprocessing import Pool
-from typing import Callable, Dict, List, Literal, Optional, Tuple, Union
+from typing import Callable, Dict, List, Optional, Tuple
 import psutil
-from watchful import client
+from watchful import client, enricher
 
 
 # Utility printer.
@@ -29,15 +29,6 @@ IS_MULTIPROC = False
 MULTIPROC_CHUNKSIZE = None
 ENRICHMENT_ARGS = None
 ATTR_WRITER = None
-EnrichedCell = List[
-    Tuple[
-        Union[
-            List[Tuple[int]],
-            Dict[str, List[str]],
-            Optional[str],
-        ]
-    ]
-]
 
 
 # Constants for encoding spans into compact strings. Do not edit them.
@@ -208,7 +199,7 @@ def contig_spans(spans: List[Tuple[int, int]]) -> List[int]:
 
     contig = []
     offset = 0
-    for (a, b) in spans:
+    for a, b in spans:
         contig.append(a - offset)
         contig.append(b - a)
         offset = b
@@ -275,7 +266,7 @@ def writer(output: io.TextIOWrapper, n_rows: int, n_cols: int) -> Callable:
 
             # Gather the new attributes and values
             # Gather and create new mappings at the same time. Duh :)
-            for (attr, vals) in attr_vals.items():
+            for attr, vals in attr_vals.items():
                 if attr not in attrs:
                     attrs[attr] = len(attrs) + 1
                     values[attr] = {}
@@ -298,7 +289,7 @@ def writer(output: io.TextIOWrapper, n_rows: int, n_cols: int) -> Callable:
             span_val = []
             if name is not None:
                 span_val.append(name)
-            for (attr, vals) in attr_vals.items():
+            for attr, vals in attr_vals.items():
                 assert len(span) == len(
                     vals
                 ), "Must be the same amount of spans as attribute values."
@@ -316,7 +307,7 @@ def writer(output: io.TextIOWrapper, n_rows: int, n_cols: int) -> Callable:
         if new_attrs:
             write_jsonl(["@"] + new_attrs)
         if new_values:
-            for (k, vals) in new_values.items():
+            for k, vals in new_values.items():
                 write_jsonl(["$", k] + vals)
         write_jsonl(cell)
 
@@ -327,7 +318,7 @@ def writer(output: io.TextIOWrapper, n_rows: int, n_cols: int) -> Callable:
 
 def spacy_atterize(
     doc,  # spacy.tokens.doc.Doc (remove type hint to reduce load time)
-) -> EnrichedCell:
+) -> enricher.EnrichedCell:
     """
     This function creates an enriched cell from the cell inference derived by
     SpaCy NLP. It extracts attributes from a SpaCy document. Attributes are
@@ -338,7 +329,7 @@ def spacy_atterize(
     :param doc: Cell inference.
     :type doc: spacy.tokens.doc.Doc
     :return: The enriched cell.
-    :rtype: EnrichedCell
+    :rtype: enricher.EnrichedCell
     """
 
     # Return value
@@ -465,7 +456,7 @@ def spacy_atterize_fn(
     cell: str,
     spacy_atterize_: Callable,
     nlp: Callable,
-) -> EnrichedCell:
+) -> enricher.EnrichedCell:
     """
     This function creates an enriched cell from the original cell using the
     SpaCy NLP enrichment objects.
@@ -478,7 +469,7 @@ def spacy_atterize_fn(
     :param nlp: A SpaCy NLP enrichment object.
     :type nlp: Callable
     :return: The enriched cell.
-    :rtype: EnrichedCell
+    :rtype: enricher.EnrichedCell
     """
 
     # Adding spacytextblob, cannot do it in load_spacy because of
@@ -511,7 +502,7 @@ def load_spacy() -> Tuple:
 
 def flair_atterize(
     sent,  # flair.data.Sentence (remove type hint to reduce load time)
-) -> EnrichedCell:
+) -> enricher.EnrichedCell:
     """
     This function creates an enriched cell from the cell inference derived by
     Flair NLP. It extracts attributes from a Flair paragraph. Attributes are
@@ -522,7 +513,7 @@ def flair_atterize(
     :param sent: Cell inference.
     :type sent: flair.data.Sentence
     :return: The enriched cell.
-    :rtype: EnrichedCell
+    :rtype: enricher.EnrichedCell
     """
 
     enriched_cell = []
@@ -546,7 +537,7 @@ def flair_atterize_fn(
     flair_atterize_: Callable,
     tagger_pred: Callable,
     sent_fn: Callable,
-) -> EnrichedCell:
+) -> enricher.EnrichedCell:
     """
     This function creates an enriched cell from the original cell using the
     Flair NLP enrichment objects.
@@ -561,7 +552,7 @@ def flair_atterize_fn(
     :param sent_fn: A Flair NLP enrichment object.
     :type sent_fn: Callable
     :return: The enriched cell.
-    :rtype: EnrichedCell
+    :rtype: enricher.EnrichedCell
     """
 
     sent = sent_fn(cell)
@@ -591,40 +582,10 @@ def load_flair() -> Tuple:
     return (tagger.predict, Sentence)
 
 
-def set_enrich_fn_order(
-    enrich_fn: Callable = None,
-    order: Literal["row", "col"] = "row",
-) -> Callable:
-    """
-    This function annotates a data enrichment function with an attribute that
-    indicates the order of the data enrichment. Currently, the allowed orders
-    are "row" and "col".
-
-    :param enrich_fn: The data enrichment function, defaults to None.
-    :type enrich_fn: Callable
-    :param order: The data enrichment order; currently the allowed orders are
-        "row" and "col", defaults to "row".
-    :type order: str
-    :return: The list of enriched cell values in the row.
-    :rtype: Callable
-    """
-
-    assert order in ["row", "col"], (
-        f'The enrichment order "{order}" is unrecognized; use either "row" or'
-        f' "col".'
-    )
-
-    def __set_enrich_fn_order(enrich_fn):
-        enrich_fn.order = order
-        return enrich_fn
-
-    if enrich_fn is None:
-        return __set_enrich_fn_order
-    return __set_enrich_fn_order(enrich_fn)
-
-
-@set_enrich_fn_order()
-def enrich_row(row: Dict[Optional[str], Optional[str]]) -> List[EnrichedCell]:
+@enricher.set_enrich_fn_order()
+def enrich_row(
+    row: Dict[Optional[str], Optional[str]]
+) -> List[enricher.EnrichedCell]:
     """
     This function enriches one row. It takes named cells of an input row and
     returns an enriched row. The global ``ENRICHMENT_ARGS`` would have
@@ -633,7 +594,7 @@ def enrich_row(row: Dict[Optional[str], Optional[str]]) -> List[EnrichedCell]:
     :param row: The dictionary of named cell values in the row.
     :type row: Dict[Optional[str], Optional[str]]
     :return: The list of enriched cell values in the row.
-    :rtype: List[EnrichedCell]
+    :rtype: List[enricher.EnrichedCell]
     """
 
     assert (
@@ -662,8 +623,8 @@ def enrich_row(row: Dict[Optional[str], Optional[str]]) -> List[EnrichedCell]:
 
 def adjust_span_offsets_from_char_to_byte(
     cell: str,
-    enriched_cell: EnrichedCell,
-) -> EnrichedCell:
+    enriched_cell: enricher.EnrichedCell,
+) -> enricher.EnrichedCell:
     """
     This function adjusts all the spans of an enriched cell from character
     offsets to byte offsets, since Watchful's data enrichment API takes in byte
@@ -673,10 +634,10 @@ def adjust_span_offsets_from_char_to_byte(
     :param cell: The string value contained in the cell.
     :type cell: str
     :param enriched_cell: A list of attributes for the cell.
-    :type enriched_cell: EnrichedCell
+    :type enriched_cell: enricher.EnrichedCell
     :return: The list of attributes for the cell whose span offsets have been
         adjusted.
-    :rtype: EnrichedCell
+    :rtype: enricher.EnrichedCell
     """
 
     byte_offsets = {}
@@ -750,8 +711,8 @@ def enrich(
         enrich_by_col(in_file, out_file, enrich_row_or_col_fn, enrichment_args)
     else:
         raise ValueError(
-            f'The enrichment order "{order}" is unrecognized; use either "row"'
-            f' or "col".'
+            f'The enrichment order "{order}" is unrecognized; use one of '
+            f"{enricher.ENRICHMENT_ORDERS}."
         )
 
 
@@ -792,7 +753,6 @@ def enrich_by_row(
     with open(in_file, encoding="utf-8", newline="") as infile, open(
         out_file, "w", encoding="utf-8"
     ) as outfile:
-
         in_reader = csv.DictReader(infile)
 
         global ATTR_WRITER
@@ -929,13 +889,13 @@ def enrich_by_col(
         del ATTR_WRITER
 
 
-def proc_enriched_row(enriched_row: List[EnrichedCell]) -> None:
+def proc_enriched_row(enriched_row: List[enricher.EnrichedCell]) -> None:
     """
     This function is iterated over every enriched row. Optionally, you may add
     code if you wish to do something auxiliary with every row.
 
     :param enriched_row: A list of enriched cells.
-    :type enriched_row: List[EnrichedCell]
+    :type enriched_row: List[enricher.EnrichedCell]
     """
 
     # Do not edit this code.
@@ -947,13 +907,13 @@ def proc_enriched_row(enriched_row: List[EnrichedCell]) -> None:
     # print(f'{"*" * 20} end of row {"*" * 20}')
 
 
-def proc_enriched_cell(enriched_cell: EnrichedCell) -> None:
+def proc_enriched_cell(enriched_cell: enricher.EnrichedCell) -> None:
     """
     This function is iterated over every enriched cell. Optionally, you may add
     code if you wish to do something auxiliary with every cell.
 
     :param enriched_cell: An enriched cell.
-    :type enriched_cell: EnrichedCell
+    :type enriched_cell: enricher.EnrichedCell
     """
 
     # Do not edit this code.
@@ -1006,10 +966,10 @@ def get_vars_for_enrich_row_with_attribute_data(
     return get_attr_row, attr_name_list, attr_reader
 
 
-@set_enrich_fn_order()
+@enricher.set_enrich_fn_order()
 def enrich_row_with_attribute_data(
     row: Dict[Optional[str], Optional[str]],
-) -> List[EnrichedCell]:
+) -> List[enricher.EnrichedCell]:
     """
     This function extracts the attributes from a row of an attributes file.
     Attributes are associated to the entire text in each named cell of the input
@@ -1019,7 +979,7 @@ def enrich_row_with_attribute_data(
     :param row: The dictionary of named cell values in the row.
     :type row: Dict[Optional[str], Optional[str]]
     :return: The list of enriched cell values in the row.
-    :rtype: List[EnrichedCell]
+    :rtype: List[enricher.EnrichedCell]
     """
 
     assert (
@@ -1105,7 +1065,7 @@ def atterize_values_in_cell(
     cell: str,
     attribute_name: str,
     values: List[re.Pattern],
-) -> EnrichedCell:
+) -> enricher.EnrichedCell:
     """
     This is a helper function to ``create_attribute_for_values()`` for finding
     the spans for each value in ``values``.
@@ -1115,7 +1075,7 @@ def atterize_values_in_cell(
     :param attribute_name: The attribute name.
     :type attribute_name: str
     :return: The enriched cell.
-    :rtype: EnrichedCell
+    :rtype: enricher.EnrichedCell
     """
 
     cell = str(cell)
