@@ -209,7 +209,6 @@ def main(args: List[str] = None, custom_enricher: Enricher = None) -> None:
     # Enrich with attributes from a csv file, that is, already created from an
     # external pipeline.
     if args.attr_file:
-
         # Enrich with all attributes.
         if not args.attr_names:
             print(
@@ -258,7 +257,6 @@ def main(args: List[str] = None, custom_enricher: Enricher = None) -> None:
 
     # Enrich using out-of-the-box NLPs.
     elif custom_enricher is None:
-
         # SpaCy NLP.
         if args.standard_nlp == "spacy":
             # Want to know what pipes are used? Uncomment these:
@@ -323,7 +321,7 @@ def main(args: List[str] = None, custom_enricher: Enricher = None) -> None:
         attributes.enrich(
             args.in_file,
             args.out_file,
-            custom_enricher.enrich_row,
+            custom_enricher.enrich_fn,
             custom_enricher.enrichment_args,
         )
         if not del_out_file:
