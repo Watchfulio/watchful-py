@@ -6,11 +6,15 @@
 Welcome to Watchful's documentation!
 ====================================
 
+The Watchful Python Package allows installation of the Watchful Python SDK over the internet from PyPI. The Watchful Python SDK enables reliable communication with the Watchful API using Python and helps in the automation of Watchful features when used with the product.
+
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
+   :caption: Contents
 
-   modules
+   install.rst
+   usage.rst
+   modules.rst
 
 
 
