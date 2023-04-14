@@ -7,7 +7,6 @@ This script provides the functions required for data enrichment.
 import csv
 import io
 import json
-import numbers
 import os
 import pprint
 import re
@@ -272,14 +271,17 @@ def writer(output: io.TextIOWrapper, n_rows: int, n_cols: int) -> Callable:
                     values[attr] = {}
                     new_attrs.append(attr)
                 for val in vals:
-                    if isinstance(val, numbers.Number):
+                    if isinstance(val, (int, float, bool)):
                         val = str(val)
-                    elif val and not isinstance(val, str):
-                        raise Exception(
-                            "Attribute value must be a string, "
-                            "None or a number. Was: " + val
+                    elif val is None:
+                        pass
+                    elif val == "" or not isinstance(val, str):
+                        raise ValueError(
+                            "Attribute value needs to be either a non-empty "
+                            f"string, int, float, bool or None; got {val} "
+                            "instead."
                         )
-                    if val and not val in values[attr]:
+                    if val and val not in values[attr]:
                         values[attr][val] = len(values[attr]) + 1
                         if attr not in new_values:
                             new_values[attr] = []
@@ -297,7 +299,9 @@ def writer(output: io.TextIOWrapper, n_rows: int, n_cols: int) -> Callable:
                 # that many of them.
                 span_val.append(attrs[attr])
                 span_val.append(
-                    base64str([values[attr][val] if val else 0 for val in vals])
+                    base64str(
+                        [values[attr][str(val)] if val else 0 for val in vals]
+                    )
                 )
 
             cell.append(base64str(contig_spans(span)))
