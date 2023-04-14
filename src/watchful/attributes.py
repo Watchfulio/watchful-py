@@ -297,7 +297,9 @@ def writer(output: io.TextIOWrapper, n_rows: int, n_cols: int) -> Callable:
                 # that many of them.
                 span_val.append(attrs[attr])
                 span_val.append(
-                    base64str([values[attr][val] if val else 0 for val in vals])
+                    base64str(
+                        [values[attr][str(val)] if val else 0 for val in vals]
+                    )
                 )
 
             cell.append(base64str(contig_spans(span)))
