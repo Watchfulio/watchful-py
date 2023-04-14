@@ -271,15 +271,17 @@ def writer(output: io.TextIOWrapper, n_rows: int, n_cols: int) -> Callable:
                     values[attr] = {}
                     new_attrs.append(attr)
                 for val in vals:
-                    if isinstance(val, (int, float, bool)) or val is None:
+                    if isinstance(val, (int, float, bool)):
                         val = str(val)
+                    elif val is None:
+                        pass
                     elif val == "" or not isinstance(val, str):
                         raise ValueError(
                             "Attribute value needs to be either a non-empty "
-                            f"string, int, float, boolean or None; got {val} "
+                            f"string, int, float, bool or None; got {val} "
                             "instead."
                         )
-                    if val not in values[attr]:
+                    if val and val not in values[attr]:
                         values[attr][val] = len(values[attr]) + 1
                         if attr not in new_values:
                             new_values[attr] = []
