@@ -7,7 +7,6 @@ This script provides the functions required for data enrichment.
 import csv
 import io
 import json
-import numbers
 import os
 import pprint
 import re
@@ -272,12 +271,12 @@ def writer(output: io.TextIOWrapper, n_rows: int, n_cols: int) -> Callable:
                     values[attr] = {}
                     new_attrs.append(attr)
                 for val in vals:
-                    if isinstance(val, numbers.Number):
+                    if isinstance(val, (int, float, bool)) or val is None:
                         val = str(val)
-                    elif val and not isinstance(val, str):
-                        raise Exception(
-                            "Attribute value must be a string, "
-                            "None or a number. Was: " + val
+                    elif not isinstance(val, str):
+                        raise ValueError(
+                            "Attribute value needs to be either a string, "
+                            f"int, float, boolean or None; got {val} instead."
                         )
                     if val and not val in values[attr]:
                         values[attr][val] = len(values[attr]) + 1
