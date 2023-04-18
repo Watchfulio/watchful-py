@@ -300,7 +300,10 @@ def writer(output: io.TextIOWrapper, n_rows: int, n_cols: int) -> Callable:
                 span_val.append(attrs[attr])
                 span_val.append(
                     base64str(
-                        [values[attr][str(val)] if val else 0 for val in vals]
+                        [
+                            0 if val is None else values[attr][str(val)]
+                            for val in vals
+                        ]
                     )
                 )
 
