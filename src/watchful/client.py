@@ -156,7 +156,7 @@ def _assert_success(summary: Dict) -> Optional[Dict]:
         verb_str = ""
         if "error_verb" in summary and summary["error_verb"]:
             verb_str = f' ({summary["error_verb"]})'
-        raise Exception(f'Summary error{verb_str}: {summary["error_msg"]}')
+        raise ValueError(f'Summary error{verb_str}: {summary["error_msg"]}')
 
     return summary
 
@@ -431,7 +431,7 @@ def get_project_id(summary: Dict) -> str:
     if "project_id" in summary:
         return summary["project_id"]
 
-    raise Exception("No project is currently active.")
+    raise WatchfulAppInstanceError("No project is currently active.")
 
 
 def get_dataset_id(summary: Dict) -> str:
@@ -451,11 +451,11 @@ def get_dataset_id(summary: Dict) -> str:
         # ``dataset_ids`` should either be empty or contain one dataset id.
         dataset_ids = summary["datasets"]
         if len(dataset_ids) == 0:
-            raise Exception("No dataset is currently opened.")
+            raise WatchfulAppInstanceError("No dataset is currently opened.")
         dataset_id = dataset_ids[0]
         return dataset_id
 
-    raise Exception("`datasets` is currently not available.")
+    raise WatchfulAppInstanceError("`datasets` is currently not available.")
 
 
 def get_watchful_home(summary: Dict, is_local: bool = True) -> str:
@@ -482,7 +482,9 @@ def get_watchful_home(summary: Dict, is_local: bool = True) -> str:
         watchful_home = os.path.join(user_home, "watchful")
         return watchful_home
 
-    raise Exception("`watchful_home` is currently not available.")
+    raise WatchfulAppInstanceError(
+        "`watchful_home` is currently not available."
+    )
 
 
 def get_datasets_dir(summary: Dict, is_local: bool = True) -> str:
@@ -1602,3 +1604,31 @@ def whoami(token: Optional[str] = None) -> Optional[Dict]:
     """
 
     return hub_api("whoami", token)
+
+
+class WatchfulAppInstanceError(Exception):
+    """
+    This class specifies the exception raised for errors relating to the
+    watchful app instance.
+    """
+
+    base_error_message = (
+        "This is a watchful app instance related error and could be resolved "
+        "by for example, creating a project, and/or opening a project, and/or "
+        "and/or adding a dataset to it."
+    )
+
+    def __init__(self, error_message=""):
+        """
+        This function concatenates the base error message with the specific
+        error message.
+
+        :param error_message: The specific error message, defaults to "".
+        :type error_message: str, optional
+        """
+        self.error_message = (
+            " ".join([error_message, self.base_error_message])
+            if error_message
+            else self.base_error_message
+        )
+        super().__init__(self.error_message)
