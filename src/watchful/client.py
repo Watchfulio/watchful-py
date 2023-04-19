@@ -76,7 +76,7 @@ def await_port_opening(port: int, timeout_sec: int = 10) -> None:
             return None
         time.sleep(0.001)
 
-    raise Exception("Timed out waiting for Watchful to start")
+    raise TimeoutError("Timed out waiting for Watchful to start")
 
 
 def spawn_cmd(cmd: str, env: str = None) -> int:
@@ -133,7 +133,7 @@ def await_summary(
         prev_summary = summary
         time.sleep(0.03)  # 30ms sleep for ~30 requests per second
 
-    raise Exception(
+    raise requests.exceptions.Timeout(
         "Timed out awaiting summary. Summary went stale for "
         + str(unchanged_timeout)
         + " seconds"
@@ -532,14 +532,14 @@ def get_dataset_filepath(summary: Dict, is_local: bool = True) -> str:
 
     # Check that ``dataset_ref_path`` exists.
     if not os.path.isfile(dataset_ref_path):
-        raise Exception(f"File {dataset_ref_path} does not exist.")
+        raise FileNotFoundError(f"File {dataset_ref_path} does not exist.")
     with open(dataset_ref_path, encoding="utf-8") as f:
         dataset_ref = f.readline()
     dataset_filepath = os.path.join(datasets_dir, "raw", dataset_ref)
 
     # Check that ``dataset_filepath`` exists.
     if not os.path.isfile(dataset_filepath):
-        raise Exception(f"File {dataset_filepath} does not exist.")
+        raise FileNotFoundError(f"File {dataset_filepath} does not exist.")
 
     return dataset_filepath
 
@@ -1098,7 +1098,7 @@ def export_dataset_to_path(out_file: str, fields: List[str] = None) -> None:
         )
         header = next(reader)
         if header[:n_cols] != fields:
-            raise Exception(
+            raise ValueError(
                 f"Dataset's column names {header} did not match the expected "
                 f"column names {fields}."
             )
@@ -1195,12 +1195,12 @@ def is_utf8(
     :rtype: bool
     """
     if csv_bytes is None and filepath is None:
-        raise Exception(
+        raise ValueError(
             "Both filepath and csv_bytes are not specified. "
             "One of them needs to be specified."
         )
     if csv_bytes and filepath:
-        raise Exception(
+        raise ValueError(
             "Both filepath and csv_bytes are specified. "
             "Only one of them needs to be specified."
         )
@@ -1217,7 +1217,7 @@ def is_utf8(
             with open(filepath, "rb") as f:
                 res = chardet.detect(f.read())
         else:
-            raise Exception(
+            raise FileNotFoundError(
                 f"There is no file at the given file path {filepath}!"
             )
 
@@ -1301,7 +1301,7 @@ def create_dataset(
 
         return dataset_id
 
-    raise Exception(
+    raise Warning(
         "Dataset is not loaded as the encoding of the csv dataset is not "
         "detected to be utf-8 and dataset loading is not forced."
     )
