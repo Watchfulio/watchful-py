@@ -5,7 +5,6 @@ pyflakes==2.4.0
 pylama==8.3.8
 pylint==2.17.2
 twine==4.0.1
-cchardet==2.1.7
 chardet==5.1.0
 flair==0.12.2
 psutil==5.9.2
