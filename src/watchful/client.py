@@ -17,6 +17,8 @@ import time
 import urllib
 from typing import Callable, Dict, Generator, List, Literal, Optional, Union
 from uuid import uuid4
+
+import chardet
 import requests
 
 
@@ -1172,7 +1174,6 @@ def is_utf8(
     csv_bytes: bytes = None,
     filepath: str = None,
     threshold: float = 0.5,
-    is_fast: bool = True,
 ) -> bool:
     """
     This function attempts to detect if the encoding of the given bytes or the
@@ -1191,7 +1192,6 @@ def is_utf8(
     :type threshold: float, optional
     :param is_fast: Whether to use fast encoding detection with a lower
         accuracy, or not.
-    :type is_fast: bool, optional
     :return: `True` if the detected encoding is utf-8 and has a confidence of
         the given threshold or more, otherwise `False`.
     :rtype: bool
@@ -1206,11 +1206,6 @@ def is_utf8(
             "Both filepath and csv_bytes are specified. "
             "Only one of them needs to be specified."
         )
-
-    if is_fast:
-        import cchardet as chardet
-    else:
-        import chardet
 
     if csv_bytes:
         res = chardet.detect(csv_bytes)
@@ -1239,7 +1234,7 @@ def create_dataset(
     filename: str = "none",
     has_header: bool = True,
     threshold_detect: float = 0.5,
-    is_fast_detect: bool = True,
+    is_fast_detect: bool = True,  # pylint: disable=W0613
     force_load: bool = True,
 ) -> str:
     """
@@ -1259,8 +1254,7 @@ def create_dataset(
     :param threshold_detect: The minimum confidence required to accept the
         detected encoding.
     :type threshold_detect: float, optional
-    :param is_fast_detect: Whether to use fast encoding detection with a lower
-        accuracy, or not.
+    :param is_fast_detect: No longer used, but remains for API compatibility
     :type is_fast_detect: bool, optional
     :param force_load: The boolean indicating if the csv dataset will be loaded
         even when its encoding is detected to be non-utf-8, defaults to True.
@@ -1274,9 +1268,7 @@ def create_dataset(
     TODO: Add error handling.
     """
 
-    is_csv_bytes_utf8 = is_utf8(
-        csv_bytes, None, threshold_detect, is_fast_detect
-    )
+    is_csv_bytes_utf8 = is_utf8(csv_bytes, None, threshold_detect)
 
     if is_csv_bytes_utf8 or force_load:
         id_ = str(uuid4())
