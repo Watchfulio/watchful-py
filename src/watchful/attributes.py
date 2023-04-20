@@ -1179,7 +1179,7 @@ def get_dataset_id_dir_filepath(
     if in_file != "":
         # Check that ``in_file`` exists.
         if not os.path.isfile(in_file):
-            raise Exception(f"File {in_file} does not exist.")
+            raise FileNotFoundError(f"File {in_file} does not exist.")
         dataset_filepath = in_file
     else:
         dataset_filepath = client.get_dataset_filepath(summary, is_local)
