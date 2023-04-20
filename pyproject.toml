@@ -1,8 +1,70 @@
-################################################################################
 [build-system]
-requires = ["setuptools>=42"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
+[project]
+name = "watchful"
+dynamic = ["version"]
+description = "Watchful API for Interacting with Watchful Environment"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.7"
+authors = [
+    { name = "Watchful", email = "engineering@watchful.io" },
+    { name = "Inc." },
+]
+keywords = [
+    "watchful",
+]
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+]
+dependencies = [
+    "chardet>=5.1.0",
+    "flair>=0.11.3",
+    "psutil>=5.9.2",
+    "spacy>=3.4.1",
+    "spacytextblob>=4.0.0",
+]
+
+[project.urls]
+"Bug Tracker" = "https://github.com/Watchfulio/watchful-py/issues"
+Homepage = "https://github.com/Watchfulio/watchful-py"
+
+[tool.hatch.version]
+path = "src/watchful/__about__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = [
+    "src/watchful",
+]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/",
+    "src",
+]
+
+[tool.hatch.envs.default]
+dependencies = [
+    "black",
+    "pytest",
+    "ruff",
+]
+
+[tool.hatch.envs.default.scripts]
+test = [
+    "PYTHONPATH=src:$PYTHONPATH python3 tests/test_*",
+    "PYTHONPATH=src:$PYTHONPATH python3 -m pytest -W ignore::DeprecationWarning tests/test_*.py",
+]
+check = [
+    "black --check --diff --config pyproject.toml src",
+    "ruff check src",
+]
+
+################################################################################
 [tool.black]
 line-length = 80
 target-version = ['py310', 'py39', 'py38']
