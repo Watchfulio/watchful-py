@@ -14,8 +14,3 @@ from .client import *
 from .attributes import *
 from .enrich import main
 from .enricher import *
-
-
-THIS_FILE_DIR = os.path.dirname(os.path.abspath(__file__))
-with open(os.path.join(THIS_FILE_DIR, "VERSION"), encoding="utf-8") as f:
-    __version__ = f.readline()

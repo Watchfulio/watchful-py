@@ -11,9 +11,6 @@ The current features include the following and their corresponding user guides:
 
 ## Steps (Use)
 
-### Create Python Enviroment
-- Refer [here](https://github.com/Watchfulio/watchful-py/blob/main/README_PY_ENV.md) for options.
-
 ### Install Watchful Python SDK from PyPI (Recommended)
 
 If you want to use Python to communicate with the Watchful API, you'll need to install the Watchful Python SDK from PyPI.
@@ -28,12 +25,6 @@ pip3 install watchful[==your.desired.version]
 
 Once you have installed the SDK, import it and begin interacting with it.
 
-```python
-import watchful as w
-w.__version__    # This prints the SDK version, for example "2.3.0".
-```
-
-> **Note**:
 > For a more thorough Watchful API introduction, read through our [API Introduction Jupyter Notebook](https://github.com/Watchfulio/watchful-py/blob/main/examples/api_intro.ipynb).
 
 ### Basic Enrichment
@@ -58,23 +49,6 @@ The Watchful SDK aims to make enrichment a straight-forward task. The following 
 
 For more guides and documentation, see the [ReadMe](https://github.com/Watchfulio/watchful-py/blob/main/examples/README.md) in the `examples` directory.
 
-## Steps (Development)
-
-### Create Python Enviroment
-- Refer [here](https://github.com/Watchfulio/watchful-py/blob/main/README_PY_ENV.md) for options.
-
-### Upgrade Tools
-- Upgrade or install `pip`, build and test tools
-```command
-pip3 install pip==22.2.2
-```
-```command
-pip3 install build==0.8.0
-```
-```command
-pip3 install pylint==2.13.9 pylama==8.3.8 black==22.3.0 pytest==7.1.1 nbval==0.9.6
-```
-
 ### Code Practices
 If contributing to this code, you're encouraged to apply the following code practices.
 - Apply linting and formatting
@@ -91,7 +65,7 @@ black src/watchful/ --config=pyproject.toml --diff
 ### Build & Install Watchful Package Locally
 - Build the package
 ```command
-python3 -m build .
+hatch build
 ```
 - Install the built package (add `--force-reinstall` to guarantee a full (re)installation)
 ```command

@@ -52,31 +52,16 @@ commands:
           name: "Install dev deps"
           command: |
             pip3 install -r requirements_dev.txt
+            pip3 install hatch
       - run:
           name: "Install test deps"
           command: |
             pip3 install -r requirements_test.txt
+            pip3 install hatch
       - save_cache:
           key: v3-sdk-dev-and-test-deps-{{ arch }}__{{ checksum "requirements_dev.txt" }}_{{ checksum "requirements_test.txt" }}
           paths:
             - "~/.pyenv"
-
-  show-sdk-env:
-    description: "Show information on SDK"
-    parameters:
-      py_env:
-        description: "The Python env"
-        type: string
-        default: "3.8.12"
-    steps:
-      - run:
-          name: "Show SDK paths and versions"
-          command: |
-            pip3 show watchful | grep "Version" | cut -d ":" -f2- | tr -d " "
-            python3 -c "import watchful; print(watchful.__version__);"
-            export ____PY_ENV_MINOR=$( echo << parameters.py_env >> | rev | cut -d "." -f2- | rev )
-            ls ~/.pyenv/versions/<< parameters.py_env >>/lib/python${____PY_ENV_MINOR}/site-packages | grep "watchful"
-            cat ~/.pyenv/versions/<< parameters.py_env >>/lib/python${____PY_ENV_MINOR}/site-packages/watchful/VERSION
 
 
 # Define a job to be invoked later in a workflow.
@@ -202,7 +187,7 @@ jobs:
       - run:
           name: "Build SDK"
           command: |
-            export ____SDK_VERSION=$( cat src/watchful/VERSION )
+            export ____SDK_VERSION=$( hatch version )
             printenv | grep ____SDK_VERSION
             python3 -m build .
       - store_artifacts:
@@ -236,6 +221,7 @@ jobs:
     steps:
       - attach_workspace:
           at: ~/repo/
+      - install-or-restore-dev-and-test-deps
       - show-py-env
       - run:
           name: "Install SDK"
@@ -243,14 +229,14 @@ jobs:
             if [[ << parameters.profile >> = "dev" && << parameters.sdk_location >> = "repo" \
               || << parameters.profile >> = "deploy" && << parameters.sdk_location >> = "repo" ]]; then
               echo Installing SDK from << parameters.sdk_location >> in profile << parameters.profile >>...
-              export ____SDK_VERSION=$( cat src/watchful/VERSION )
+              export ____SDK_VERSION=$( hatch version )
               printenv | grep ____SDK_VERSION
               pip3 uninstall watchful -y || true
               pip3 show watchful | grep "Version" | cut -d ":" -f2- | tr -d " " || true
               pip3 install dist/watchful-${____SDK_VERSION}-*.whl
             elif [[ << parameters.profile >> = "deploy" && << parameters.sdk_location >> = "pypi" ]]; then
               echo Installing SDK from << parameters.sdk_location >> in profile << parameters.profile >>...
-              export ____SDK_VERSION=$( cat src/watchful/VERSION )
+              export ____SDK_VERSION=$( hatch version )
               printenv | grep ____SDK_VERSION
               pip3 uninstall watchful -y || true
               pip3 show watchful | grep "Version" | cut -d ":" -f2- | tr -d " " || true
@@ -271,8 +257,6 @@ jobs:
               echo Path for profile=<< parameters.profile >> sdk_location=<< parameters.sdk_location >> is not implemented!
               exit 1
             fi
-      - show-sdk-env:
-          py_env: << parameters.executor_tag >>
       - persist_to_workspace:
           root: ~/
           paths:
@@ -305,8 +289,6 @@ jobs:
           at: ~/
       - show-py-env
       - install-or-restore-dev-and-test-deps
-      - show-sdk-env:
-          py_env: << parameters.executor_tag >>
       - run:
           name: "Test SDK"
           command: |
@@ -332,7 +314,7 @@ jobs:
       - run:
           name: "Validate Tag & Publish SDK"
           command: |
-            export ____SDK_VERSION=$( cat src/watchful/VERSION )
+            export ____SDK_VERSION=$( hatch version )
             printenv | grep ____SDK_VERSION
             echo git-tag is << pipeline.git.tag >> and SDK version in repo is $____SDK_VERSION.
             if [[ << pipeline.git.tag >> = "v"$____SDK_VERSION ]]; then

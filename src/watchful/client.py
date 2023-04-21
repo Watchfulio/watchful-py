@@ -21,6 +21,8 @@ from uuid import uuid4
 import chardet
 import requests
 
+from watchful.__about__ import __version__
+
 
 THIS_DIR_PATH = os.path.dirname(os.path.abspath(__file__))
 SCHEME: Literal["http", "https"] = "http"
@@ -37,7 +39,7 @@ def _refresh() -> None:
     del sys.modules["watchful"]
     import watchful
 
-    print(f"watchful version: {watchful.__version__}")
+    print(f"watchful version: {watchful.__about__.__version__}")
 
 
 def _get_conn_url() -> str:
@@ -246,11 +248,7 @@ def request(
         method in methods
     ), f"{method} is not one of the currently implemented methods: {methods}!"
 
-    default_headers = {}
-    version_filepath = os.path.join(THIS_DIR_PATH, "VERSION")
-    with open(version_filepath, encoding="utf-8") as f:
-        version = f.readline()
-        default_headers.update({"x-watchful-sdk": version})
+    default_headers = {"x-watchful-sdk": __version__}
 
     headers = kwargs.get("headers", {})
     if headers == {}:
