@@ -368,7 +368,7 @@ def spacy_atterize(
             regex = re.compile(f"\\b{re.escape(word)}\\b")
             for m in regex.finditer(doc.text):
                 span = m.span()
-                if not span in assessments:
+                if span not in assessments:
                     assessments[span] = (1, [polarity], [subjectivity])
                 else:
                     (c, ps, ss) = assessments.get(span)
@@ -481,7 +481,7 @@ def spacy_atterize_fn(
 
     # Adding spacytextblob, cannot do it in load_spacy because of
     # our multiprocessing code. Adding a pipe to SpaCy is idempotent.
-    from spacytextblob.spacytextblob import (  # pylint: disable=unused-import
+    from spacytextblob.spacytextblob import (  # noqa: F401
         SpacyTextBlob,
     )
 
