@@ -2,8 +2,7 @@
 This script provides the functions required for interacting directly with
 Watchful client application.
 """
-################################################################################
-
+# mypy: ignore-errors
 
 import base64
 import csv
@@ -15,7 +14,16 @@ import subprocess
 import sys
 import time
 import urllib
-from typing import Callable, Dict, Generator, List, Literal, Optional, Union
+from typing import (
+    Callable,
+    Dict,
+    Generator,
+    List,
+    Literal,
+    Optional,
+    Union,
+    Mapping,
+)
 from uuid import uuid4
 
 import chardet
@@ -83,7 +91,14 @@ def await_port_opening(port: int, timeout_sec: int = 10) -> None:
     raise TimeoutError("Timed out waiting for Watchful to start")
 
 
-def spawn_cmd(cmd: str, env: str = None) -> int:
+def spawn_cmd(
+    cmd: str,
+    env: Union[
+        Mapping[bytes, Union[str, bytes, os.PathLike[str], os.PathLike[bytes]]],
+        Mapping[str, Union[str, bytes, os.PathLike[str], os.PathLike[bytes]]],
+        None,
+    ] = None,
+) -> int:
     """
     This function spawns a command and returns the PID of the spawned process.
 
@@ -188,7 +203,7 @@ def register_summary_hook(function: Callable) -> None:
 
 def _read_response(
     response: requests.models.Response, response_is_summary: bool = False
-) -> Optional[Dict]:
+) -> Dict:
     """
     This function raises an exception if ``response.status_code`` is not 200,
     otherwise it returns ``ret``.
@@ -262,7 +277,7 @@ def request(
     )
 
 
-def api(verb: str, **kwargs: Dict) -> Optional[Dict]:
+def api(verb: str, **kwargs: Dict) -> Dict:
     """
     This is a convenience function for API calls; made up of a verb and optional
     keyword arguments.
@@ -281,7 +296,7 @@ def api(verb: str, **kwargs: Dict) -> Optional[Dict]:
     return api_send_action(action)
 
 
-def api_send_action(action: Dict) -> Optional[Dict]:
+def api_send_action(action: Dict) -> Dict:
     """
     This is a convenience function for API calls with an action.
 
@@ -835,7 +850,7 @@ def delete_class(class__: str) -> Optional[Dict]:
     return api("delete", class_name=class__)
 
 
-def get() -> Optional[Dict]:
+def get() -> Dict:
     """
     This function gets the current status of the Watchful application,
     containing information such as your currently active project, dataset
@@ -880,7 +895,7 @@ def external_hinter(class__: str, name: str, weight: int) -> Optional[Dict]:
 def upload_attributes(
     dataset_id: str,
     attributes_filepath: str,
-) -> Optional[Dict]:
+) -> Dict:
     """
     This function uploads the attributes for the ``dataset_id`` to the remote
     Watchful application, where the Watchful application then saves it to a
@@ -913,7 +928,7 @@ def upload_attributes(
 def load_attributes(
     dataset_id: str,
     attributes_filename: str,
-) -> Optional[Dict]:
+) -> Dict:
     """
     This function is used in the case of Watchful application being on the same
     machine as the data enrichment.
@@ -1072,7 +1087,9 @@ def export_stream(
     return response
 
 
-def export_dataset_to_path(out_file: str, fields: List[str] = None) -> None:
+def export_dataset_to_path(
+    out_file: str, fields: Optional[List[str]] = None
+) -> None:
     """
     This function exports the original dataset via a buffered stream to the
     specified output file path. It takes ``fields`` as an optional argument for
@@ -1169,8 +1186,8 @@ def export_project() -> requests.models.Response:
 
 
 def is_utf8(
-    csv_bytes: bytes = None,
-    filepath: str = None,
+    csv_bytes: Optional[bytes] = None,
+    filepath: Optional[str] = None,
     threshold: float = 0.5,
 ) -> bool:
     """

@@ -1,8 +1,7 @@
 """
 This script provides the functions required for data enrichment.
 """
-################################################################################
-
+# mypy: ignore-errors
 
 import csv
 import io

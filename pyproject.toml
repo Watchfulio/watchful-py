@@ -50,9 +50,12 @@ include = [
 [tool.hatch.envs.default]
 dependencies = [
     "black",
+    "mypy",
     "nose-py3",
     "pytest",
     "ruff",
+    "types-psutil",
+    "types-requests",
 ]
 
 [tool.hatch.envs.default.scripts]
@@ -62,7 +65,33 @@ test = [
 check = [
     "black --check --diff --config pyproject.toml src tests",
     "ruff check src tests",
+    "mypy src",  # We do not need to type check tests
 ]
+
+[tool.mpypy]
+allow_redefinition = false
+allow_untyped_globals = false
+check_untyped_defs = true
+disallow_any_unimported = true
+disallow_any_expr = true
+disallow_any_explicit = true
+disallow_any_generics = true
+disallow_subclassing_any = true
+disallow_any_decorated = true
+disallow_untyped_calls = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+disallow_untyped_decorators = true
+strict = true
+strict_optional = true
+strict_equality = true
+
+[[tool.mypy.overrides]]
+module = [
+    "flair",
+    "spacytextblob",
+]
+ignore_missing_imports = true
 
 ################################################################################
 [tool.black]

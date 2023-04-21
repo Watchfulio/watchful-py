@@ -8,16 +8,15 @@ for a tutorial on how to implement your custom enricher class.
 ################################################################################
 
 
-from abc import ABCMeta, abstractmethod
+from abc import ABCMeta, abstractmethod, abstractproperty
+import typing
 from typing import (
     Callable,
-    Generic,
     Dict,
     List,
     Literal,
     Optional,
     Tuple,
-    TypeVar,
     Union,
 )
 
@@ -35,7 +34,7 @@ ENRICHMENT_ORDERS: List[str] = ["row", "col"]
 
 
 def set_enrich_fn_order(
-    enrich_fn: Callable = None,
+    enrich_fn: Optional[Callable] = None,
     order: Literal["row", "col"] = "row",
 ) -> Callable:
     """
@@ -83,7 +82,13 @@ class Enricher(metaclass=ABCMeta):
         class.
         """
 
-        pass
+    @abstractproperty
+    def enrichment_args(self) -> Tuple:
+        # XXX: rockstar (22 Apr 2023) - This Tuple has very
+        # defined requirements, as it will become part of the
+        # (not great) global scope in attributes.py as ENRICHMENT_ARGS.
+        # This will get addressed when attributes gets typed.
+        return (str, "")
 
     @abstractmethod
     @set_enrich_fn_order(
@@ -124,7 +129,7 @@ class Enricher(metaclass=ABCMeta):
         pass
 
     @classmethod
-    def is_enricher(cls, possibly_an_enricher: Generic[TypeVar("T")]) -> bool:
+    def is_enricher(cls, possibly_an_enricher: typing.Any) -> bool:
         """
         This is a convenience method used for checking if
         :class:`possibly_an_enricher` is indeed of the :class:`Enricher` class.
@@ -140,9 +145,7 @@ class Enricher(metaclass=ABCMeta):
         return issubclass(possibly_an_enricher, cls)
 
     @classmethod
-    def is_fully_formed_enricher(
-        cls, possibly_an_enricher: Generic[TypeVar("T")]
-    ) -> bool:
+    def is_fully_formed_enricher(cls, possibly_an_enricher: typing.Any) -> bool:
         """
         This is a convenience method used for checking if
         :class:`possibly_an_enricher` has defined its enrichment order that
