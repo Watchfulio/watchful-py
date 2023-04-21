@@ -50,18 +50,18 @@ include = [
 [tool.hatch.envs.default]
 dependencies = [
     "black",
+    "nose-py3",
     "pytest",
     "ruff",
 ]
 
 [tool.hatch.envs.default.scripts]
 test = [
-    "PYTHONPATH=src:$PYTHONPATH python3 tests/test_*",
-    "PYTHONPATH=src:$PYTHONPATH python3 -m pytest -W ignore::DeprecationWarning tests/test_*.py",
+    "PYTHONPATH=src:$PYTHONPATH nosetests --with-coverage --cover-erase --cover-package=watchful --cover-html tests",
 ]
 check = [
-    "black --check --diff --config pyproject.toml src",
-    "ruff check src",
+    "black --check --diff --config pyproject.toml src tests",
+    "ruff check src tests",
 ]
 
 ################################################################################
