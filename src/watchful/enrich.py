@@ -11,14 +11,14 @@ import os
 import pathlib
 import shutil
 import sys
-from typing import List, Type
+from typing import Optional, List, Type, Sequence
 from watchful import client, attributes
 from watchful.enricher import Enricher
 
 
 def enrich_dataset(
     custom_enricher_cls: Type[Enricher],
-    args: List[str] = None,
+    args: Optional[List[str]] = None,
 ) -> None:
     """
     This is the function to use for performing custom data enrichment. Custom
@@ -41,7 +41,10 @@ def enrich_dataset(
     main(args, custom_enricher)
 
 
-def main(args: List[str] = None, custom_enricher: Enricher = None) -> None:
+def main(
+    overrides: Optional[Sequence[str]] = None,
+    custom_enricher: Optional[Enricher] = None,
+) -> None:
     """
     This is the utility function for performing data enrichment without a custom
     enricher; it is generally not called directly but invoked via the Python
@@ -55,8 +58,8 @@ def main(args: List[str] = None, custom_enricher: Enricher = None) -> None:
     :type args: List[str]
     """
 
-    if args is None:
-        args = []
+    if overrides is None:
+        overrides = []
 
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
@@ -147,7 +150,7 @@ def main(args: List[str] = None, custom_enricher: Enricher = None) -> None:
             hosted application; hosted application if unspecified.",
     )
 
-    args = parser.parse_args(args=args)
+    args = parser.parse_args(args=overrides)
 
     attributes.set_multiprocessing(args.multiprocessing)
 
