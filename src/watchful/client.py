@@ -2,7 +2,6 @@
 This script provides the functions required for interacting directly with
 Watchful client application.
 """
-# mypy: ignore-errors
 
 import base64
 import csv
@@ -15,6 +14,7 @@ import sys
 import time
 import urllib
 from typing import (
+    Any,
     Callable,
     Dict,
     Generator,
@@ -159,7 +159,7 @@ def await_summary(
     )
 
 
-def _assert_success(summary: Dict) -> Optional[Dict]:
+def _assert_success(summary: Dict) -> Dict:
     """
     This function raises an exception if summary contains "error_msg", otherwise
     it returns the summary.
@@ -242,7 +242,12 @@ def _read_response(
 
 
 def request(
-    method: str = "GET", path: str = "/", **kwargs: Dict
+    method: str = "GET",
+    path: str = "/",
+    headers: Optional[Dict[str, str]] = None,
+    data: Optional[Union[str, bytes, io.TextIOWrapper]] = None,
+    timeout: Optional[int] = None,
+    stream: Optional[bool] = False,
 ) -> requests.models.Response:
     """
     This is a wrapper function for API calls; made up of the API method, path
@@ -265,19 +270,19 @@ def request(
 
     default_headers = {"x-watchful-sdk": __version__}
 
-    headers = kwargs.get("headers", {})
+    if headers is None:
+        headers = {}
     if headers == {}:
         headers.update(default_headers)
-        kwargs["headers"] = headers
     else:
         headers.update(default_headers)
 
     return getattr(requests, method.lower())(
-        f"{_get_conn_url()}{path}", **kwargs
+        f"{_get_conn_url()}{path}", headers, data, timeout, stream
     )
 
 
-def api(verb: str, **kwargs: Dict) -> Dict:
+def api(verb: str, **kwargs: Any) -> Dict:
     """
     This is a convenience function for API calls; made up of a verb and optional
     keyword arguments.
@@ -296,7 +301,7 @@ def api(verb: str, **kwargs: Dict) -> Dict:
     return api_send_action(action)
 
 
-def api_send_action(action: Dict) -> Dict:
+def api_send_action(action: Dict[str, str]) -> Dict:
     """
     This is a convenience function for API calls with an action.
 
@@ -306,12 +311,13 @@ def api_send_action(action: Dict) -> Dict:
     :rtype: Dict, optional
     """
 
-    fields = {
-        "data": json.dumps(action),
-        "headers": {"Content-Type": "application/json"},
-        "timeout": API_TIMEOUT_SEC,
-    }
-    response = request("POST", "/api", **fields)
+    response = request(
+        "POST",
+        "/api",
+        headers={"Content-type": "application/json"},
+        data=json.dumps(action),
+        timeout=API_TIMEOUT_SEC,
+    )
 
     return _read_response(response, response_is_summary=True)
 
@@ -334,7 +340,9 @@ def ephemeral(port: str = "9002") -> None:
 
 
 def external(
-    host: str = "localhost", port: str = "9001", scheme: str = "http"
+    host: str = "localhost",
+    port: str = "9001",
+    scheme: Literal["http", "https"] = "http",
 ) -> None:
     """
     This function changes the global ``HOST``, ``PORT`` and ``SCHEME`` values.
@@ -755,6 +763,8 @@ def query_all(q: str, max_pages: int = 0) -> Generator[List[str], None, None]:
     page = 0
     while True:
         summary = query(q, page)
+        if summary is None:
+            break
         for fields in [cand["fields"] for cand in summary["candidates"]]:
             yield fields
         page += 1
@@ -788,7 +798,7 @@ def await_plabels() -> Optional[Dict]:
     return await_summary(lambda s: s["status"] == "current")
 
 
-def hinter_async(class__: str, query_: str, weight: int) -> Optional[Dict]:
+def hinter_async(class__: str, query_: str, weight: int) -> Dict:
     """
     This function creates a hinter. As it is asynchronous, the immediate HTTP
     response is likely not updated yet.
@@ -944,7 +954,7 @@ def load_attributes(
     return api("attributes", id=dataset_id, file=attributes_filename)
 
 
-def _dump(offset: int) -> Optional[Dict]:
+def _dump(offset: int) -> Dict:
     """
     This function returns a chunk of candidates in "hint API order".
 
@@ -1010,7 +1020,7 @@ def hint(name: str, offset: int, values: List[bool]) -> Optional[Dict]:
     TODO: Come up with a better streaming Python API here.
     """
 
-    values = list(map(lambda x: x and 1 or 0, values))
+    values = list(map(lambda x: x, values))
 
     return _assert_success(api("hint", name=name, offset=offset, values=values))
 
@@ -1104,7 +1114,7 @@ def export_dataset_to_path(
     :type fields: List, optional
     """
 
-    if not fields:
+    if fields is None:
         fields = get()["field_names"]
     n_cols = len(fields)
 
@@ -1187,7 +1197,9 @@ def export_project() -> requests.models.Response:
 
 def is_utf8(
     csv_bytes: Optional[bytes] = None,
-    filepath: Optional[str] = None,
+    filepath: Optional[
+        Union[int, Union[str, bytes, os.PathLike[str], os.PathLike[bytes]]]
+    ] = None,
     threshold: float = 0.5,
 ) -> bool:
     """
@@ -1211,36 +1223,36 @@ def is_utf8(
         the given threshold or more, otherwise `False`.
     :rtype: bool
     """
-    if csv_bytes is None and filepath is None:
-        raise ValueError(
-            "Both filepath and csv_bytes are not specified. "
-            "One of them needs to be specified."
-        )
-    if csv_bytes and filepath:
+    if csv_bytes is not None and filepath is not None:
         raise ValueError(
             "Both filepath and csv_bytes are specified. "
             "Only one of them needs to be specified."
         )
 
-    if csv_bytes:
+    if csv_bytes is not None:
         res = chardet.detect(csv_bytes)
-    else:
+    elif filepath is not None:
         if os.path.isfile(filepath):
             with open(filepath, "rb") as f:
                 res = chardet.detect(f.read())
         else:
             raise FileNotFoundError(
-                f"There is no file at the given file path {filepath}!"
+                f"There is no file at the given file path {filepath!r}!"
             )
+    else:
+        raise ValueError(
+            "Both filepath and csv_bytes are not specified. "
+            "One of them needs to be specified."
+        )
 
     # Because cChardet likes to be specific with encoding,
     # ASCII will be specified if the valid UTF-8 characters
     # fit within that subset.
     valid_encodings = ["utf-8", "ascii"]
-    enc = res["encoding"].lower()
-    if enc in valid_encodings and res["confidence"] >= threshold:
-        return True
-    return False
+    if res["encoding"] is not None:
+        enc = res["encoding"].lower()
+        return enc in valid_encodings and res["confidence"] >= threshold
+    raise ValueError("chardet charset detection did not return an encoding.")
 
 
 def create_dataset(
@@ -1452,9 +1464,17 @@ def candidate_dicts(summary: Optional[Dict] = None) -> List[Dict[str, str]]:
 
     if summary is None:
         summary = get()
+
+    def combine(c: Any):
+        if summary is None:
+            # This should never happen, but is here to convince mypy
+            # that it should never happen.
+            raise ValueError("Error reading the summary")
+        return dict(zip(summary["field_names"], c["fields"]))
+
     return list(
         map(
-            lambda c: dict(zip(summary["field_names"], c["fields"])),
+            combine,
             summary["candidates"],
         )
     )
@@ -1478,7 +1498,7 @@ def exit_backend() -> None:
 ## Hub API
 
 
-def hub_api(verb: str, token: str, **kwargs: Dict) -> Optional[Dict]:
+def hub_api(verb: str, token: str) -> Optional[Dict]:
     """
     This is a convenience function for collaboration API calls with Watchful;
     made up of a verb, a token and optional keyword arguments.
@@ -1495,12 +1515,10 @@ def hub_api(verb: str, token: str, **kwargs: Dict) -> Optional[Dict]:
 
     headers = {"Content-Type": "application/json"}
     headers.update({"Authorization": "Bearer " + token})
-    action = kwargs  # already a dictionary
-    action["verb"] = verb
     response = request(
         "POST",
         "/remote",
-        data=json.dumps(action),
+        data=json.dumps({"verb": verb}),
         headers=headers,
         timeout=API_TIMEOUT_SEC,
     )
@@ -1535,7 +1553,7 @@ def login(email: str, password: str) -> Optional[Dict]:
     return _assert_success(_read_response(response))
 
 
-def publish(token: Optional[str] = None) -> Optional[Dict]:
+def publish(token: str) -> Optional[Dict]:
     """
     This function performs publish with Watchful hub.
 
@@ -1548,7 +1566,7 @@ def publish(token: Optional[str] = None) -> Optional[Dict]:
     return hub_api("publish", token)
 
 
-def fetch(token: Optional[str] = None) -> Optional[Dict]:
+def fetch(token: str) -> Optional[Dict]:
     """
     This function performs fetch with Watchful hub.
 
@@ -1561,7 +1579,7 @@ def fetch(token: Optional[str] = None) -> Optional[Dict]:
     return hub_api("fetch", token)
 
 
-def pull(token: Optional[str] = None) -> Optional[Dict]:
+def pull(token: str) -> Optional[Dict]:
     """
     This function performs pull with Watchful hub.
 
@@ -1574,7 +1592,7 @@ def pull(token: Optional[str] = None) -> Optional[Dict]:
     return hub_api("pull", token)
 
 
-def push(token: Optional[str] = None) -> Optional[Dict]:
+def push(token: str) -> Optional[Dict]:
     """
     This function performs push with Watchful hub.
 
@@ -1587,7 +1605,7 @@ def push(token: Optional[str] = None) -> Optional[Dict]:
     return hub_api("push", token)
 
 
-def peek(token: Optional[str] = None) -> Optional[Dict]:
+def peek(token: str) -> Optional[Dict]:
     """
     This function performs peek with Watchful hub.
 
@@ -1600,7 +1618,7 @@ def peek(token: Optional[str] = None) -> Optional[Dict]:
     return hub_api("peek", token)
 
 
-def whoami(token: Optional[str] = None) -> Optional[Dict]:
+def whoami(token: str) -> Optional[Dict]:
     """
     This function performs whoami with Watchful hub.
 
