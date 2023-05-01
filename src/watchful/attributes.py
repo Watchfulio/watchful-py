@@ -82,19 +82,11 @@ def set_multiproc_chunksize(multiproc_chunksize: int) -> None:
         MULTIPROC_CHUNKSIZE = multiproc_chunksize
 
 
-def print_multiproc_params() -> None:
-    """
-    This function prints the multiprocessing flag and the multiprocessing chunk
-    size for the data enrichment. This is still in internal alpha mode and is
-    not expected to be used by user.
-    """
-
-    print(
-        f"multiprocessing: {IS_MULTIPROC}, "
-        f"multiprocessing chunksize: {MULTIPROC_CHUNKSIZE}"
-    )
-
-
+# XXX: rockstar (1 May 2023) - This is not base64 encoding, so I'm not
+# sure why it's being named that. It might _look_ like base64 encoding
+# on the output, but it isn't. As it's not actually a standard format,
+# we now have to have parsers/generators in both rust and python. This
+# is not ideal.
 def base64(num: int) -> str:
     """
     This function takes in an integer value and returns its encoded string
@@ -105,7 +97,6 @@ def base64(num: int) -> str:
     :return: The encoded string value.
     :rtype: str
     """
-
     if num == 0:
         return NUMERALS[0]
 

@@ -1430,25 +1430,6 @@ def set_hub_url(url: str) -> Optional[Dict]:
     return _read_response(response)
 
 
-def print_candidates(summary: Optional[Dict] = None) -> None:
-    """
-    This function retrieves and prints the column names and all the candidates.
-
-    :param summary: The dictionary of the HTTP response from a connection
-        request, defaults to None.
-    :type summary: Dict, optional
-    """
-
-    if summary is None:
-        summary = get()
-    print(
-        "\n".join(
-            [",".join(summary["field_names"])]
-            + list(map(lambda c: ",".join(c["fields"]), summary["candidates"]))
-        )
-    )
-
-
 def candidate_dicts(summary: Optional[Dict] = None) -> List[Dict[str, str]]:
     """
     This function retrieves and returns all the candidates, together with the
