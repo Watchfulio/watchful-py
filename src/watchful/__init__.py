@@ -58,7 +58,6 @@ from .client import (
     config_set,
     config,
     set_hub_url,
-    print_candidates,
     candidate_dicts,
     exit_backend,
     hub_api,
@@ -74,7 +73,6 @@ from .client import (
 from .attributes import (
     set_multiprocessing,
     set_multiproc_chunksize,
-    print_multiproc_params,
     base64,
     base64str,
     contig_spans,

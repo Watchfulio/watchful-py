@@ -61,7 +61,7 @@ dependencies = [
 
 [tool.hatch.envs.default.scripts]
 test = [
-    "PYTHONPATH=src:$PYTHONPATH nosetests --with-coverage --cover-erase --cover-package=watchful --cover-html tests",
+    "PYTHONPATH=src:$PYTHONPATH nosetests -s --with-coverage --cover-erase --cover-package=watchful --cover-html tests",
 ]
 check = [
     "black --check --diff --config pyproject.toml src tests",
@@ -94,7 +94,6 @@ module = [
 ]
 ignore_missing_imports = true
 
-################################################################################
 [tool.black]
 line-length = 80
 target-version = ['py310', 'py39', 'py38']
