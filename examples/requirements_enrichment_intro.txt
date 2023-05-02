@@ -77,7 +77,7 @@ pyparsing==3.0.9
 PySocks==1.7.1
 python-dateutil==2.8.2
 PyYAML==6.0
-pyzmq==24.0.1
+pyzmq==25.0.2
 regex==2022.10.31
 requests==2.28.1
 scikit-learn==1.1.3
