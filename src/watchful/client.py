@@ -262,12 +262,6 @@ def request(
     :return: The HTTP response from the connection request.
     :rtype: requests.models.Response
     """
-
-    methods = ["GET", "POST", "PUT"]
-    assert (
-        method in methods
-    ), f"{method} is not one of the currently implemented methods: {methods}!"
-
     default_headers = {"x-watchful-sdk": __version__}
 
     if headers is None:
@@ -277,9 +271,24 @@ def request(
     else:
         headers.update(default_headers)
 
-    return getattr(requests, method.lower())(
-        f"{_get_conn_url()}{path}", headers, data, timeout, stream
-    )
+    path = f"{_get_conn_url()}{path}"
+
+    if method == "GET":
+        return requests.get(
+            path, headers=headers, data=data, timeout=timeout, stream=stream
+        )
+    elif method == "POST":
+        return requests.post(
+            path, headers=headers, data=data, timeout=timeout, stream=stream
+        )
+    elif method == "PUT":
+        return requests.put(
+            path, headers=headers, data=data, timeout=timeout, stream=stream
+        )
+    else:
+        raise ValueError(
+            f"{method} is not one of the currently implemented methods: GET, POST, PUT!"
+        )
 
 
 def api(verb: str, **kwargs: Any) -> Dict:
@@ -366,7 +375,7 @@ def external(
     PORT = port
 
 
-def list_projects() -> Dict:
+def list_projects() -> List[Dict[str, Union[str, bool]]]:
     """
     This function lists the available projects.
 
@@ -404,7 +413,7 @@ def open_project(id_: str) -> str:
     return ret
 
 
-def create_project(title_: Optional[str] = None) -> Union[str, Optional[Dict]]:
+def create_project(title_: Optional[str] = None) -> Union[str, Dict]:
     """
     This function creates a new project. Additionally, if title is supplied, a
     title is given to the newly created project.
@@ -425,7 +434,7 @@ def create_project(title_: Optional[str] = None) -> Union[str, Optional[Dict]]:
     return ret
 
 
-def title(title_: str) -> Optional[Dict]:
+def title(title_: str) -> Dict:
     """
     This function gives a title to a newly created project.
 

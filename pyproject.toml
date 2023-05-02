@@ -53,6 +53,7 @@ dependencies = [
     "mypy",
     "nose-py3",
     "pytest",
+    "responses",
     "ruff",
     "types-psutil",
     "types-requests",
