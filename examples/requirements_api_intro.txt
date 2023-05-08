@@ -64,7 +64,7 @@ pip==23.1.1
 pptree==3.1
 preshed==3.0.8
 prompt-toolkit==3.0.8
-psutil==5.9.3
+psutil==5.9.5
 ptyprocess==0.7.0
 pure-eval==0.2.2
 py4j==0.10.9.7
