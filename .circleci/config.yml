@@ -36,7 +36,7 @@ jobs:
     steps:
       - checkout
       - install-hatch
-      - run: 
+      - run:
           command: hatch run test
   check:
     docker:
@@ -105,13 +105,22 @@ workflows:
   version: 2
   core:
     jobs:
-      - build
+      - build:
+        filters:
+            tags:
+              only: /^v\d+\.\d+\.\d+[a-z]*\d*$/
       - test:
           requires:
             - build
+          filters:
+            tags:
+              only: /^v\d+\.\d+\.\d+[a-z]*\d*$/
       - check:
           requires:
             - build
+          filters:
+            tags:
+              only: /^v\d+\.\d+\.\d+[a-z]*\d*$/
       - publish:
           requires:
             - build
