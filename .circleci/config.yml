@@ -108,19 +108,19 @@ workflows:
       - build:
         filters:
             tags:
-              only: /^v\d+\.\d+\.\d+[a-z]*\d*$/
+              only: /.*/
       - test:
           requires:
             - build
           filters:
             tags:
-              only: /^v\d+\.\d+\.\d+[a-z]*\d*$/
+              only: /.*/
       - check:
           requires:
             - build
           filters:
             tags:
-              only: /^v\d+\.\d+\.\d+[a-z]*\d*$/
+              only: /.*/
       - publish:
           requires:
             - build
@@ -128,7 +128,7 @@ workflows:
             - check
           filters:
             tags:
-              only: /^v\d+\.\d+\.\d+[a-z]*\d*$/
+              only: /.*/
             branches:
               ignore: /.*/
       - send-slack-notification:
@@ -136,6 +136,6 @@ workflows:
             - publish
           filters:
             tags:
-              only: /^v\d+\.\d+\.\d+[a-z]*\d*$/
+              only: /.*/
             branches:
               ignore: /.*/
