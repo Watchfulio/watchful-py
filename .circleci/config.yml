@@ -4,7 +4,7 @@ version: 2.1
 # from the legacy system, and are used for the slack notification.
 # Once that slack notification is also simplified, these can go.
 orbs:
-  slack: circleci/slack@4.10.1
+  slack: circleci/slack@4.12.5
 
 executors:
   linux-python:
@@ -12,7 +12,7 @@ executors:
       tag:
         type: string
     docker:
-      - image: cimg/python:<< parameters.tag >>
+      - image: circleci/python:<< parameters.tag >>
 
 commands:
   install-hatch:
@@ -58,13 +58,13 @@ jobs:
             Ensure that the tag matches the version of the python library. If those
             two versions don't match, don't continue to publish.
           command: |
-            if [ ! [ << pipeline.git.tag >> = "v$(hatch version)"]]; then
+            if [ "<< pipeline.git.tag >>" != "v$(hatch version)" ]; then
               echo Git tag does not match the python library version. Aborting publish job.
               exit 1
             fi
-      - run:
-          name: "Publish to PyPI"
-          command: hatch publish -n -a $PYPI_TOKEN
+      #- run:
+      #    name: "Publish to PyPI"
+      #    command: hatch publish -n -a $PYPI_TOKEN
 
   send-slack-notification:
     parameters:
@@ -105,22 +105,9 @@ workflows:
   version: 2
   core:
     jobs:
-      - build:
-        filters:
-            tags:
-              only: /^v\d+\.\d+\.\d+[a-z]*\d*$/
-      - test:
-          requires:
-            - build
-          filters:
-            tags:
-              only: /^v\d+\.\d+\.\d+[a-z]*\d*$/
-      - check:
-          requires:
-            - build
-          filters:
-            tags:
-              only: /^v\d+\.\d+\.\d+[a-z]*\d*$/
+      - build
+      - test
+      - check
       - publish:
           requires:
             - build
@@ -128,7 +115,7 @@ workflows:
             - check
           filters:
             tags:
-              only: /^v\d+\.\d+\.\d+[a-z]*\d*$/
+              only: /^.*$/
             branches:
               ignore: /.*/
       - send-slack-notification:
@@ -136,6 +123,6 @@ workflows:
             - publish
           filters:
             tags:
-              only: /^v\d+\.\d+\.\d+[a-z]*\d*$/
+              only: /^.*$/
             branches:
               ignore: /.*/
