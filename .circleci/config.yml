@@ -64,7 +64,7 @@ jobs:
             fi
       - run:
           name: "Publish to PyPI"
-          command: hatch publish -n -a $PYPI_TOKEN
+          command: hatch publish -n -a $PYPI_TOKEN -u runyan
 
   send-slack-notification:
     parameters:
