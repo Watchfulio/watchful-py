@@ -110,7 +110,7 @@ workflows:
   release:
     when: << pipeline.git.tag >>
     jobs:
-      - publish
+      - publish:
           filters:
             tags:
               only: /.*/
