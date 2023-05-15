@@ -63,6 +63,9 @@ jobs:
               exit 1
             fi
       - run:
+          name: "Build package"
+          command: hatch build
+      - run:
           name: "Publish to PyPI"
           command: hatch publish -n -a $PYPI_TOKEN -u runyan
 
