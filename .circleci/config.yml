@@ -67,7 +67,7 @@ jobs:
           command: hatch build
       - run:
           name: "Publish to PyPI"
-          command: hatch publish -n -a $PYPI_TOKEN -u runyan
+          command: hatch publish -n -a $PYPI_TOKEN -u __token__
 
   send-slack-notification:
     parameters:
