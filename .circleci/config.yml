@@ -102,25 +102,14 @@ jobs:
             }
 
 workflows:
-  version: 2
   core:
     jobs:
-      - build:
-        filters:
-            tags:
-              only: /.*/
-      - test:
-          requires:
-            - build
-          filters:
-            tags:
-              only: /.*/
-      - check:
-          requires:
-            - build
-          filters:
-            tags:
-              only: /.*/
+      - build
+      - test
+      - check
+  release:
+    when: << pipeline.git.tag >>
+    jobs:
       - publish:
           requires:
             - build
@@ -129,13 +118,9 @@ workflows:
           filters:
             tags:
               only: /.*/
-            branches:
-              ignore: /.*/
       - send-slack-notification:
           requires:
             - publish
           filters:
             tags:
               only: /.*/
-            branches:
-              ignore: /.*/
