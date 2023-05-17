@@ -70,6 +70,8 @@ from .client import (
     whoami,
     WatchfulAppInstanceError,
 )
+
+from .client2 import Client
 from .attributes import (
     set_multiprocessing,
     set_multiproc_chunksize,
