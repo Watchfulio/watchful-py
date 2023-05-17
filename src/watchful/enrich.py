@@ -123,6 +123,10 @@ def main(
             "9001".',
     )
 
+    parser.add_argument(
+        "--scheme", type=str, default="http", help="One of 'http' or 'https'"
+    )
+
     # The out-of-the-box NLP to use if no ``attr_file`` is provided.
     parser.add_argument(
         "--standard_nlp",
@@ -154,7 +158,7 @@ def main(
 
     attributes.set_multiprocessing(args.multiprocessing)
 
-    client.external(host=args.host, port=args.port)
+    client.external(host=args.host, port=args.port, scheme=args.scheme)
 
     summary = client.get()
     project_id = client.get_project_id(summary)
