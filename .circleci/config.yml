@@ -27,25 +27,46 @@ jobs:
       - image: circleci/python
     steps:
       - checkout
+      - restore_cache:
+          key: watchful-py-{{ checksum "pyproject.toml" }}
       - install-hatch
       - run:
           command: hatch build
+      - save_cache:
+          key: watchful-py-{{ checksum "pyproject.toml" }}
+          paths:
+            - ".hatch-env"
+            - "~/.cache/pip"
   test:
     docker:
       - image: circleci/python
     steps:
       - checkout
+      - restore_cache:
+          key: watchful-py-{{ checksum "pyproject.toml" }}
       - install-hatch
       - run:
           command: hatch run test
+      - save_cache:
+          key: watchful-py-{{ checksum "pyproject.toml" }}
+          paths:
+            - ".hatch-env"
+            - "~/.cache/pip"
   check:
     docker:
       - image: circleci/python
     steps:
       - checkout
+      - restore_cache:
+          key: watchful-py-{{ checksum "pyproject.toml" }}
       - install-hatch
       - run:
           command: hatch run check
+      - save_cache:
+          key: watchful-py-{{ checksum "pyproject.toml" }}
+          paths:
+            - ".hatch-env"
+            - "~/.cache/pip"
   publish:
     docker:
       - image: circleci/python
