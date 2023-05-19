@@ -48,6 +48,11 @@ include = [
 ]
 
 [tool.hatch.envs.default]
+# CircleCI doesn't have a dynamic way of specifying paths
+# to be cached, so rather than just using the result of
+# `hatch env find`, we specify a static path and cache it.
+type = "virtual"
+path = ".hatch-env"
 dependencies = [
     "black",
     "mypy",
