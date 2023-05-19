@@ -595,27 +595,6 @@ def records(csv_: str) -> Optional[Dict]:
     return api("records", data=csv_, content_type="text/csv")
 
 
-def _column_flag(
-    columns: List[bool],
-    flag: Literal["inferenceable"] = "inferenceable",
-) -> Optional[Dict]:
-    """
-    This function sets a flag for each of the columns of the dataset in the
-    currently active project.
-
-    :param columns: A list of true/false values, specifying whether the flag
-        should be set for each column.
-    :type columns: List
-    :param flag: The flag to be set; "inferenceable" is currently the only
-        supported flag.
-    :type flag: str, optional
-    :return: The dictionary of the HTTP response from the connection request.
-    :rtype: Dict, optional
-    """
-
-    return api("column_flag", flag=flag, columns=columns)
-
-
 def set_column_flag(
     columns: Optional[List[str]] = None,
     flag: Literal["inferenceable"] = "inferenceable",
@@ -662,7 +641,7 @@ def set_column_flag(
 
         col_bools = list(map(__f, col_names))
 
-    return _column_flag(col_bools, flag)
+    return api("column_flag", flag=flag, columns=col_bools)
 
 
 def ignore_column_flag(
