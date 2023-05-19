@@ -1,4 +1,5 @@
 import unittest
+from unittest import mock
 from urllib.parse import urljoin
 
 import responses
@@ -6,6 +7,11 @@ import responses
 from watchful.client2 import Client, Summary
 
 URL_ROOT = "http://example.com:9001"
+DATASET_CONTENTS = """columnA,columnB
+a,b
+c,d
+e,f
+g,h"""
 
 
 class TestSummary(unittest.TestCase):
@@ -108,7 +114,9 @@ class TestClient(unittest.TestCase):
         self.assertEqual(expected, projects)
 
     @responses.activate
-    def test_create_project(self):
+    @mock.patch("watchful.client2.uuid.uuid4")
+    def test_create_project(self, uuid4):
+        uuid4.return_value = "7"
         responses.add(
             "POST",
             urljoin(URL_ROOT, "projects"),
@@ -116,11 +124,20 @@ class TestClient(unittest.TestCase):
         )
         responses.add(
             "POST",
+            urljoin(URL_ROOT, "api/_stream/7/0/true"),
+        )
+        responses.add(
+            "POST",
+            urljoin(URL_ROOT, "api/_stream/7"),
+            json={"id": "12"},
+        )
+        responses.add(
+            "POST",
             urljoin(URL_ROOT, "api"),
             json={
                 "project_id": "abc123",
                 "title": "my new project",
-                "datasets": [""],
+                "datasets": ["12"],
                 "auto_complete": "",
                 "cand_seq_full": "",
                 "cand_seq_prefix": "",
@@ -168,6 +185,10 @@ class TestClient(unittest.TestCase):
         )
 
         client = Client(URL_ROOT)
-        summary = client.create_project("my new project")
+        summary = client.create_project(
+            "my new project",
+            data=DATASET_CONTENTS,
+            columns=["columnA", "columnB"],
+        )
 
         self.assertEqual("my new project", summary.title)

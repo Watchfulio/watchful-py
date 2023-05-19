@@ -5,6 +5,7 @@ import os
 import typing
 import time
 from urllib.parse import urljoin
+import uuid
 
 import requests
 
@@ -127,21 +128,33 @@ class Client:
 
         return self.get_summary()
 
-    def create_project(self, title: str) -> Summary:
+    def create_project(
+        self,
+        title: str,
+        data: bytes,
+        columns: typing.List[str],
+        has_header: bool = True,
+    ) -> Summary:
         """Create a project.
 
         The client differs slightly from the API, as the API
         allows a project to be created without setting a title. However,
         the client does not provide a method for doing the same. It requires
         a title to be specified on creation.
+
+        Additionally, the API will allow users to create projects that
+        don't have datasets attached to them. This interface requires a
+        dataset when creating the project.
         """
         self.open_project("new")
 
-        _response = self._session.post(
+        self._session.post(
             urljoin(self._root_url, "api"),
             json={"verb": "title", "title": title},
             timeout=self.timeout,
         )
+
+        dataset_id = self.create_dataset(data, columns)
 
         # It's _possible_ this loop isn't needed here (and probably shouldn't
         # be, regardless). It's probably a standard practice to get the summary
@@ -149,18 +162,36 @@ class Client:
         end = time.time_ns() + (self.timeout * 1_000_000_000)
         while time.time_ns() < end:
             summary = self.get_summary()
-            if summary.title == title:
+            if summary.title == title and summary.datasets == [dataset_id]:
                 return summary
             time.sleep(0.1)
-        raise TimeoutError("Title change was never acknowledged.")
+        raise TimeoutError(
+            "Timeout waiting for project to be completed. "
+            "The state of the project is unknown."
+        )
 
-    # TODO: What are the differences between the following
-    # two functions?
-    def load_csv(self, data: str) -> None:
-        """Load a csv dataset."""
-
-    def create_dataset(self, data: bytes) -> None:
+    def create_dataset(
+        self, data: bytes, columns: typing.List[str], has_header: bool = True
+    ) -> str:
         """Create a dataset from a CSV file."""
+        # Yes, that's right. We create our own id...
+        dataset_uuid = uuid.uuid4()
+        self._session.post(
+            urljoin(self._root_url, f"api/_stream/{dataset_uuid}/0/true"),
+            data=data,
+            headers={"content-type": "text/csv"},
+        )
+        response = self._session.post(
+            urljoin(self._root_url, f"/api/_stream/{dataset_uuid}"),
+            json={"filename": f"{dataset_uuid}.csv", "has_header": has_header},
+        )
+        dataset_id = response.json()["id"]
+
+        self._session.post(
+            urljoin(self._root_url, "/api"),
+            json={"verb": "dataset_add", "id": dataset_id, "columns": columns},
+        )
+        return dataset_id
 
     # TODO: should there be a way to see the columns easily?
     def set_columns(self, columns: typing.List[bool]):
