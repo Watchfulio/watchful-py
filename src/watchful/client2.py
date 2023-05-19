@@ -31,7 +31,7 @@ class Summary:
     cand_seq_prefix: int
     candidates: typing.List[typing.Any]
     classes: typing.Dict[str, str]
-    column_flags: typing.Dict[str, str]
+    column_flags: typing.Dict[str, typing.List[bool]]
     disagreements: typing.List[typing.Any]
     enrichment_tasks: typing.List[typing.Any]
     error_msg: typing.Optional[str]
@@ -193,9 +193,32 @@ class Client:
         )
         return dataset_id
 
-    # TODO: should there be a way to see the columns easily?
-    def set_columns(self, columns: typing.List[bool]):
-        """Set the columns to infer hints."""
+    def flag_columns(
+        self,
+        columns: typing.List[bool],
+        flag: typing.Literal["inferenceable"] = "inferenceable",
+    ) -> Summary:
+        """Toggle flags for columns."""
+        if flag != "inferenceable":
+            raise ValueError(
+                "Only the 'inferenceable' flag is supported at this time."
+            )
+
+        self._session.post(
+            urljoin(self._root_url, "api"),
+            json={"verb": "column_flag", "flag": flag, "columns": columns},
+        )
+
+        end = time.time_ns() + (self.timeout * 1_000_000_000)
+        while time.time_ns() < end:
+            summary = self.get_summary()
+            if summary.column_flags[flag] == columns:
+                return summary
+            time.sleep(0.1)
+        raise TimeoutError(
+            "Timeout waiting for project to be completed. "
+            "The state of the project is unknown."
+        )
 
     def create_class(
         self, classification: str, class_type: str = "ftc"
