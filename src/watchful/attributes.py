@@ -315,7 +315,7 @@ def writer(output: io.TextIOWrapper, n_rows: int, n_cols: int) -> Callable:
 
 def spacy_atterize(
     doc,  # spacy.tokens.doc.Doc (remove type hint to reduce load time)
-) -> enricher.EnrichedCell:
+) -> enricher.EnrichedCell:  # pragma: no cover
     """
     This function creates an enriched cell from the cell inference derived by
     SpaCy NLP. It extracts attributes from a SpaCy document. Attributes are
@@ -453,7 +453,7 @@ def spacy_atterize_fn(
     cell: str,
     spacy_atterize_: Callable,
     nlp: Callable,
-) -> enricher.EnrichedCell:
+) -> enricher.EnrichedCell:  # pragma: no cover
     """
     This function creates an enriched cell from the original cell using the
     SpaCy NLP enrichment objects.
@@ -480,7 +480,7 @@ def spacy_atterize_fn(
     return spacy_atterize_(nlp(cell))
 
 
-def load_spacy() -> Tuple:
+def load_spacy() -> Tuple:  # pragma: no cover
     """
     This function creates and returns the SpaCy NLP objects for data enrichment.
 
@@ -499,7 +499,7 @@ def load_spacy() -> Tuple:
 
 def flair_atterize(
     sent,  # flair.data.Sentence (remove type hint to reduce load time)
-) -> enricher.EnrichedCell:
+) -> enricher.EnrichedCell:  # pragma: no cover
     """
     This function creates an enriched cell from the cell inference derived by
     Flair NLP. It extracts attributes from a Flair paragraph. Attributes are
@@ -534,7 +534,7 @@ def flair_atterize_fn(
     flair_atterize_: Callable,
     tagger_pred: Callable,
     sent_fn: Callable,
-) -> enricher.EnrichedCell:
+) -> enricher.EnrichedCell:  # pragma: no cover
     """
     This function creates an enriched cell from the original cell using the
     Flair NLP enrichment objects.
@@ -558,7 +558,7 @@ def flair_atterize_fn(
     return flair_atterize_(sent)
 
 
-def load_flair() -> Tuple:
+def load_flair() -> Tuple:  # pragma: no cover
     """
     This function creates and returns the Flair NLP objects for data enrichment.
 
