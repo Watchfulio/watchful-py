@@ -55,6 +55,8 @@ jobs:
           key: watchful-py-{{ checksum "pyproject.toml" }}
           paths:
             - ".hatch-env"
+            - ".mypy_cache"
+            - ".ruff_cache"
             - "~/.cache/pip"
   publish:
     docker:
