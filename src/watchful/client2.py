@@ -11,6 +11,7 @@ import uuid
 import requests
 
 from watchful.__about__ import __version__
+from watchful import types
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -222,15 +223,36 @@ class Client:
         )
 
     def create_class(
-        self, classification: str, class_type: str = "ftc"
-    ) -> None:
+        self,
+        name: str,
+        class_type: types.ClassificationType = types.ClassificationType.FTC,
+    ) -> Summary:
         """Add a classification."""
+        response = self._session.post(
+            urljoin(self._root_url, "api"),
+            json={
+                "verb": "class",
+                "name": name,
+                "class_type": class_type.value,
+            },
+        )
+        return Summary(**response.json())
 
     def delete_class(
         self,
-        classification: str,
-    ) -> None:
+        name: str,
+    ) -> Summary:
         """Delete a classifier."""
+        response = self._session.post(
+            urljoin(self._root_url, "api"),
+            json={
+                "verb": "delete",
+                # XXX: rockstar (22 May 2023) - This is named differently
+                # than "name" from `create_class`.
+                "class_name": name,
+            },
+        )
+        return Summary(**response.json())
 
     def query(self, query: str, page: int = 0) -> None:
         """Execute a query."""

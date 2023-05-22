@@ -264,6 +264,123 @@ class TestClient(unittest.TestCase):
         )
 
     @responses.activate
+    def test_create_class(self):
+        """A text class is created."""
+        responses.add(
+            responses.POST,
+            urljoin(URL_ROOT, "api"),
+            json={
+                "project_id": "abc123",
+                "title": "my new project",
+                "datasets": ["12"],
+                "auto_complete": "",
+                "cand_seq_full": "",
+                "cand_seq_prefix": "",
+                "candidates": [],
+                "classes": "",
+                "column_flags": {"inferenceable": [True, False, False]},
+                "disagreements": "",
+                "enrichment_tasks": "",
+                "error_msg": None,
+                "error_verb": None,
+                "export_preview": None,
+                "exports": [],
+                "field_names": [],
+                "hand_labels": [],
+                "hinters": [],
+                "is_shared": False,
+                "messages": [],
+                "n_candidates": "",
+                "n_handlabels": "",
+                "ner_hl_text": "",
+                "notifications": "",
+                "precision_candidate": "",
+                "project_config": "",
+                "published_title": "",
+                "pull_actions": "",
+                "push_actions": "",
+                "query": "",
+                "query_breakdown": "",
+                "query_completed": "",
+                "query_end": "",
+                "query_examined": "",
+                "query_full_rows": "",
+                "query_history": "",
+                "query_hit_count": "",
+                "query_page": "",
+                "selected_class": "",
+                "selections": "",
+                "show_notification_badge": "",
+                "state_seq": "",
+                "status": "",
+                "suggestion": "",
+                "suggestions": "",
+                "unlabeled_candidate": "",
+            },
+        )
+        client = Client(URL_ROOT)
+        client.create_class("myClass")
+
+    @responses.activate
+    def test_delete_class(self):
+        """A text class is deleted."""
+        responses.add(
+            responses.POST,
+            urljoin(URL_ROOT, "api"),
+            json={
+                "project_id": "abc123",
+                "title": "my new project",
+                "datasets": ["12"],
+                "auto_complete": "",
+                "cand_seq_full": "",
+                "cand_seq_prefix": "",
+                "candidates": [],
+                "classes": "",
+                "column_flags": {"inferenceable": [True, False, False]},
+                "disagreements": "",
+                "enrichment_tasks": "",
+                "error_msg": None,
+                "error_verb": None,
+                "export_preview": None,
+                "exports": [],
+                "field_names": [],
+                "hand_labels": [],
+                "hinters": [],
+                "is_shared": False,
+                "messages": [],
+                "n_candidates": "",
+                "n_handlabels": "",
+                "ner_hl_text": "",
+                "notifications": "",
+                "precision_candidate": "",
+                "project_config": "",
+                "published_title": "",
+                "pull_actions": "",
+                "push_actions": "",
+                "query": "",
+                "query_breakdown": "",
+                "query_completed": "",
+                "query_end": "",
+                "query_examined": "",
+                "query_full_rows": "",
+                "query_history": "",
+                "query_hit_count": "",
+                "query_page": "",
+                "selected_class": "",
+                "selections": "",
+                "show_notification_badge": "",
+                "state_seq": "",
+                "status": "",
+                "suggestion": "",
+                "suggestions": "",
+                "unlabeled_candidate": "",
+            },
+        )
+
+        client = Client(URL_ROOT)
+        client.delete_class("myClass")
+
+    @responses.activate
     def test_set_base_rate(self):
         """The base rate for a class is set."""
         responses.add(
