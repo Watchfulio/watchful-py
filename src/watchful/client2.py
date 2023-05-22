@@ -267,16 +267,78 @@ class Client:
         )
         return Summary(**response.json())
 
-    def create_hinter(
-        self, classification: str, query: str, weight: int
-    ) -> None:
+    def create_hinter(self, name: str, query: str, weight: int) -> Summary:
         """Create a hinter."""
+        self._session.post(
+            urljoin(self._root_url, "api"),
+            json={
+                "verb": "hinter",
+                "label": name,
+                "weight": weight,
+                "query": query,
+            },
+        )
 
-    def create_external_hinter(self, classification: str, weight: int) -> None:
+        end = time.time_ns() + (self.timeout * 1_000_000_000)
+        while time.time_ns() < end:
+            summary = self.get_summary()
+            if summary.status == "current":
+                return summary
+            time.sleep(0.1)
+        raise TimeoutError(
+            "Timeout waiting for project to be completed. "
+            "The state of the project is unknown."
+        )
+
+    def create_external_hinter(
+        self, name: str, classification: types.ClassificationType, weight: int
+    ) -> Summary:
         """Create an external hinter."""
+        self._session.post(
+            urljoin(self._root_url, "api"),
+            json={
+                "verb": "hinter",
+                "query": "[external]",
+                "name": name,
+                "label": classification.value,
+                "weight": weight,
+            },
+        )
 
-    def delete_hinter(self, hinter_id: int) -> None:
+        end = time.time_ns() + (self.timeout * 1_000_000_000)
+        while time.time_ns() < end:
+            summary = self.get_summary()
+            if summary.status == "current":
+                return summary
+            time.sleep(0.1)
+        raise TimeoutError(
+            "Timeout waiting for project to be completed. "
+            "The state of the project is unknown."
+        )
+
+    def delete_hinter(self, hinter_id: int) -> Summary:
         """Delete a hinter."""
+        # This is worrying. The "delete" verb is used for
+        # deleting hinters _and_ deleting classes. The only
+        # differentiator is the remaining keys in the task.
+        self._session.post(
+            urljoin(self._root_url, "api"),
+            json={
+                "verb": "delete",
+                "id": hinter_id,
+            },
+        )
+
+        end = time.time_ns() + (self.timeout * 1_000_000_000)
+        while time.time_ns() < end:
+            summary = self.get_summary()
+            if summary.status == "current":
+                return summary
+            time.sleep(0.1)
+        raise TimeoutError(
+            "Timeout waiting for project to be completed. "
+            "The state of the project is unknown."
+        )
 
     def upload_attributes(
         self, dataset_id: str, atributes_filepath: str
