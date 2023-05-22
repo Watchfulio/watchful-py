@@ -45,7 +45,7 @@ konoha==4.6.5
 langcodes==3.3.0
 langdetect==1.0.9
 lxml==4.9.2
-MarkupSafe==2.1.1
+MarkupSafe==2.1.2
 matplotlib==3.6.2
 matplotlib-inline==0.1.6
 more-itertools==9.0.0
