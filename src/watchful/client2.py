@@ -236,8 +236,13 @@ class Client:
 
     # TODO: do we need to query_all?
 
-    def set_base_rate(self, classification: str, rate: int) -> None:
+    def set_base_rate(self, classification: str, rate: int) -> Summary:
         """Set the base rate for a classification."""
+        response = self._session.post(
+            urljoin(self._root_url, "api"),
+            json={"verb": "base_rate", "label": classification, "rate": rate},
+        )
+        return Summary(**response.json())
 
     def create_hinter(
         self, classification: str, query: str, weight: int
