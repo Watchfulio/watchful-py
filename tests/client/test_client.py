@@ -192,3 +192,73 @@ class TestClient(unittest.TestCase):
         )
 
         self.assertEqual("my new project", summary.title)
+
+    @responses.activate
+    def test_flag_columns(self):
+        """Column flags are set."""
+        responses.add(
+            "POST",
+            urljoin(URL_ROOT, "api"),
+            json={
+                "project_id": "abc123",
+                "title": "my new project",
+                "datasets": ["12"],
+                "auto_complete": "",
+                "cand_seq_full": "",
+                "cand_seq_prefix": "",
+                "candidates": [],
+                "classes": "",
+                "column_flags": {"inferenceable": [True, False, False]},
+                "disagreements": "",
+                "enrichment_tasks": "",
+                "error_msg": None,
+                "error_verb": None,
+                "export_preview": None,
+                "exports": [],
+                "field_names": [],
+                "hand_labels": [],
+                "hinters": [],
+                "is_shared": False,
+                "messages": [],
+                "n_candidates": "",
+                "n_handlabels": "",
+                "ner_hl_text": "",
+                "notifications": "",
+                "precision_candidate": "",
+                "project_config": "",
+                "published_title": "",
+                "pull_actions": "",
+                "push_actions": "",
+                "query": "",
+                "query_breakdown": "",
+                "query_completed": "",
+                "query_end": "",
+                "query_examined": "",
+                "query_full_rows": "",
+                "query_history": "",
+                "query_hit_count": "",
+                "query_page": "",
+                "selected_class": "",
+                "selections": "",
+                "show_notification_badge": "",
+                "state_seq": "",
+                "status": "",
+                "suggestion": "",
+                "suggestions": "",
+                "unlabeled_candidate": "",
+            },
+        )
+
+        flags = [True, False, False]
+        client = Client(URL_ROOT)
+        summary = client.flag_columns(flags)
+
+        self.assertEqual({"inferenceable": flags}, summary.column_flags)
+
+    def test_flag_columns_not_inferenceable(self):
+        """Flags not explicitly titled "inferenceable" are not allowed."""
+        client = Client(URL_ROOT)
+
+        self.assertRaises(
+            ValueError, client.flag_columns, [False, False], "my-flag"
+        )
