@@ -92,7 +92,7 @@ jobs:
                   "type": "header",
                   "text": {
                     "type": "plain_text",
-                    "text": "New SDK Release! ${CIRCLE_TAG:1} :tada:",
+                    "text": "New SDK Release! ${CIRCLE_TAG} :tada:",
                     "emoji": true
                   }
                 },
