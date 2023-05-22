@@ -350,3 +350,37 @@ class TestClient(unittest.TestCase):
         summary = client.set_base_rate("my-class", 10)
 
         self.assertIn("my-class", summary.classes)
+
+    @responses.activate
+    def test_set_config(self):
+        """A configuration option is set."""
+        responses.add(
+            "POST",
+            urljoin(URL_ROOT, "config"),
+        )
+        responses.add(
+            "GET", urljoin(URL_ROOT, "config"), json={"username": "bobbyhill"}
+        )
+
+        client = Client(URL_ROOT)
+        config = client.set_config("username", "bobbyhill")
+
+        self.assertEqual({"username": "bobbyhill"}, config)
+
+    @responses.activate
+    def test_set_hub_url(self):
+        """A hub url is set."""
+        responses.add(
+            "POST",
+            urljoin(URL_ROOT, "config"),
+        )
+        responses.add(
+            "GET",
+            urljoin(URL_ROOT, "config"),
+            json={"remote": "http://watchful.example.com"},
+        )
+
+        client = Client(URL_ROOT)
+        config = client.set_hub_url("http://watchful.example.com")
+
+        self.assertEqual({"remote": "http://watchful.example.com"}, config)

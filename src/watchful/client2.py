@@ -275,16 +275,44 @@ class Client:
         """Label a candidate row."""
         return []
 
-    def set_config(self, key: str, value: str) -> None:
-        """Set a config value."""
+    def get_summary(self) -> Summary:
+        """Get the Watchful summary."""
+        response = self._session.post(
+            urljoin(self._root_url, "api"),
+            json={"verb": "nop"},
+            timeout=self.timeout,
+        )
+        return Summary(**response.json())
+
+    def set_config(self, key: str, value: str) -> typing.Dict:
+        """Set a config value.
+
+        This function returns the resulting config.
+        """
+        self._session.post(
+            urljoin(self._root_url, "config"),
+            json={"verb": "set", "key": key, "value": value},
+            timeout=self.timeout,
+        )
+
+        return self.get_config()
 
     # TODO: config should be a typed dataclass
     def get_config(self) -> typing.Dict:
         """Get the config."""
-        return {}
+        response = self._session.get(
+            urljoin(self._root_url, "config"), timeout=self.timeout
+        )
+        return response.json()
 
-    def set_hub_url(self, url) -> None:
+    def set_hub_url(self, url) -> typing.Dict[str, str]:
         """Set the hub url."""
+        return self.set_config("remote", url)
+
+    # Remote functionality
+    #
+    # The functions below interface with a "hub" instance, and thus
+    # require authentication.
 
     def login(self, email: str, password: str) -> None:
         """Log in to hub."""
@@ -306,12 +334,3 @@ class Client:
 
     def whoami(self, token: str) -> None:
         """Get login info from hub."""
-
-    def get_summary(self) -> Summary:
-        """Get the Watchful summary."""
-        response = self._session.post(
-            urljoin(self._root_url, "api"),
-            json={"verb": "nop"},
-            timeout=self.timeout,
-        )
-        return Summary(**response.json())
