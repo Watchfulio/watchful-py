@@ -44,7 +44,7 @@ def enrich_dataset(
 def main(
     overrides: Optional[Sequence[str]] = None,
     custom_enricher: Optional[Enricher] = None,
-) -> None:
+) -> None:  # pragma: no cover
     """
     This is the utility function for performing data enrichment without a custom
     enricher; it is generally not called directly but invoked via the Python
