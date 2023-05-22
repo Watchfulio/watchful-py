@@ -384,3 +384,100 @@ class TestClient(unittest.TestCase):
         config = client.set_hub_url("http://watchful.example.com")
 
         self.assertEqual({"remote": "http://watchful.example.com"}, config)
+
+    @responses.activate
+    def test_login(self):
+        """A user can log in to a remote hub."""
+        responses.add(
+            responses.POST, urljoin(URL_ROOT, "remote"), body="myToken"
+        )
+
+        client = Client(URL_ROOT)
+        data = client.login("myUserName", "NotAVerySecurePassword")
+
+        self.assertTrue(
+            responses.assert_call_count(urljoin(URL_ROOT, "remote"), 1)
+        )
+        self.assertEqual(data, "myToken")
+
+    @responses.activate
+    def test_publish(self):
+        """Project data is published to a hub."""
+        responses.add(responses.POST, urljoin(URL_ROOT, "remote"), body="OK")
+
+        client = Client(URL_ROOT)
+        data = client.publish("myToken")
+
+        self.assertTrue(
+            responses.assert_call_count(urljoin(URL_ROOT, "remote"), 1)
+        )
+        self.assertEqual(data, "OK")
+
+    @responses.activate
+    def test_fetch(self):
+        """Project state is fetched from a hub."""
+        responses.add(responses.POST, urljoin(URL_ROOT, "remote"), body="OK")
+
+        client = Client(URL_ROOT)
+        data = client.fetch("myToken")
+
+        self.assertTrue(
+            responses.assert_call_count(urljoin(URL_ROOT, "remote"), 1)
+        )
+        self.assertEqual(data, "OK")
+
+    @responses.activate
+    def test_pull(self):
+        """Project data is pulled from a hub."""
+        responses.add(responses.POST, urljoin(URL_ROOT, "remote"), body="OK")
+
+        client = Client(URL_ROOT)
+        data = client.pull("myToken")
+
+        self.assertTrue(
+            responses.assert_call_count(urljoin(URL_ROOT, "remote"), 1)
+        )
+        self.assertEqual(data, "OK")
+
+    @responses.activate
+    def test_push(self):
+        """Project data is pushed to a hub."""
+        responses.add(responses.POST, urljoin(URL_ROOT, "remote"), body="OK")
+
+        client = Client(URL_ROOT)
+        data = client.push("myToken")
+
+        self.assertTrue(
+            responses.assert_call_count(urljoin(URL_ROOT, "remote"), 1)
+        )
+        self.assertEqual(data, "OK")
+
+    @responses.activate
+    def test_peek(self):
+        """Hub data can be viewed without a pull."""
+        responses.add(
+            responses.POST,
+            urljoin(URL_ROOT, "remote"),
+            body="OK",
+        )
+
+        client = Client(URL_ROOT)
+        data = client.peek("myToken")
+
+        self.assertTrue(
+            responses.assert_call_count(urljoin(URL_ROOT, "remote"), 1)
+        )
+        self.assertEqual(data, "OK")
+
+    @responses.activate
+    def test_whoami(self):
+        """A user can find out who they are logged in as."""
+        responses.add(responses.POST, urljoin(URL_ROOT, "remote"), body="OK")
+
+        client = Client(URL_ROOT)
+        data = client.whoami("myToken")
+
+        self.assertTrue(
+            responses.assert_call_count(urljoin(URL_ROOT, "remote"), 1)
+        )
+        self.assertEqual(data, "OK")

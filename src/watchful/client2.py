@@ -1,4 +1,5 @@
 from __future__ import annotations
+import base64
 
 from dataclasses import dataclass, field
 import os
@@ -314,23 +315,103 @@ class Client:
     # The functions below interface with a "hub" instance, and thus
     # require authentication.
 
-    def login(self, email: str, password: str) -> None:
+    def login(
+        self, email: str, password: str
+    ) -> typing.Union[str, typing.Dict[str, str]]:
         """Log in to hub."""
+        credentials = base64.b64encode(f"{email}:{password}".encode()).decode(
+            "utf-8"
+        )
+        # Remote functions return a summary. In this case, we'll ignore the
+        # summary, as it's mostly irrelevant for what we need.
+        response = self._session.post(
+            urljoin(self._root_url, "remote"),
+            json={"verb": "login"},
+            headers={"Authorization": f"Basic {credentials}"},
+            timeout=self.timeout,
+        )
+        try:
+            return response.json()
+        except ValueError:
+            return response.text
 
-    def publish(self, token: str) -> None:
+    # XXX: rockstar (22 May 2023) - The following functions all required a
+    # token. It's likely that we should just capture the remote token somewhere
+    # and re-use it as part of the session.
+    def publish(self, token: str) -> typing.Union[str, typing.Dict[str, str]]:
         """Publish to hub."""
+        response = self._session.post(
+            urljoin(self._root_url, "remote"),
+            json={"verb": "publish"},
+            headers={"Authorization": f"Bearer {token}"},
+            timeout=self.timeout,
+        )
+        try:
+            return response.json()
+        except ValueError:
+            return response.text
 
-    def fetch(self, token: str) -> None:
+    def fetch(self, token: str) -> typing.Union[str, typing.Dict[str, str]]:
         """Fetch data from hub."""
+        response = self._session.post(
+            urljoin(self._root_url, "remote"),
+            json={"verb": "fetch"},
+            headers={"Authorization": f"Bearer {token}"},
+            timeout=self.timeout,
+        )
+        try:
+            return response.json()
+        except ValueError:
+            return response.text
 
-    def pull(self, token: str) -> None:
+    def pull(self, token: str) -> typing.Union[str, typing.Dict[str, str]]:
         """Pull data from hub."""
+        response = self._session.post(
+            urljoin(self._root_url, "remote"),
+            json={"verb": "pull"},
+            headers={"Authorization": f"Bearer {token}"},
+            timeout=self.timeout,
+        )
+        try:
+            return response.json()
+        except ValueError:
+            return response.text
 
-    def push(self, token: str) -> None:
+    def push(self, token: str) -> typing.Union[str, typing.Dict[str, str]]:
         """Push data to hub."""
+        response = self._session.post(
+            urljoin(self._root_url, "remote"),
+            json={"verb": "push"},
+            headers={"Authorization": f"Bearer {token}"},
+            timeout=self.timeout,
+        )
+        try:
+            return response.json()
+        except ValueError:
+            return response.text
 
-    def peek(self, token: str) -> None:
+    def peek(self, token: str) -> typing.Union[str, typing.Dict[str, str]]:
         """Peek at data in hub."""
+        response = self._session.post(
+            urljoin(self._root_url, "remote"),
+            json={"verb": "peek"},
+            headers={"Authorization": f"Bearer {token}"},
+            timeout=self.timeout,
+        )
+        try:
+            return response.json()
+        except ValueError:
+            return response.text
 
-    def whoami(self, token: str) -> None:
+    def whoami(self, token: str) -> typing.Union[str, typing.Dict[str, str]]:
         """Get login info from hub."""
+        response = self._session.post(
+            urljoin(self._root_url, "remote"),
+            json={"verb": "whoami"},
+            headers={"Authorization": f"Bearer {token}"},
+            timeout=self.timeout,
+        )
+        try:
+            return response.json()
+        except ValueError:
+            return response.text
