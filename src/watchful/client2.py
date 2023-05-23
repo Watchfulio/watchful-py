@@ -254,10 +254,27 @@ class Client:
         )
         return Summary(**response.json())
 
-    def query(self, query: str, page: int = 0) -> None:
+    def query(self, query: str, page: int = 0) -> Summary:
         """Execute a query."""
+        self._session.post(
+            urljoin(self._root_url, "api"),
+            json={
+                "verb": "query",
+                "query": query,
+                "page": page,
+            },
+        )
 
-    # TODO: do we need to query_all?
+        end = time.time_ns() + (self.timeout * 1_000_000_000)
+        while time.time_ns() < end:
+            summary = self.get_summary()
+            if summary.query_completed and summary.query != query:
+                return summary
+            time.sleep(0.1)
+        raise TimeoutError(
+            "Timeout waiting for project to be completed. "
+            "The state of the project is unknown."
+        )
 
     def set_base_rate(self, classification: str, rate: int) -> Summary:
         """Set the base rate for a classification."""
