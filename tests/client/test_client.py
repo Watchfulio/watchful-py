@@ -5,6 +5,7 @@ from urllib.parse import urljoin
 import responses
 
 from watchful.client2 import Client, Summary
+from watchful import types
 
 URL_ROOT = "http://example.com:9001"
 DATASET_CONTENTS = """columnA,columnB
@@ -598,3 +599,275 @@ class TestClient(unittest.TestCase):
             responses.assert_call_count(urljoin(URL_ROOT, "remote"), 1)
         )
         self.assertEqual(data, "OK")
+
+    @responses.activate
+    def test_create_hinter(self):
+        """A hinter is created."""
+        responses.add(
+            "POST",
+            urljoin(URL_ROOT, "api"),
+            json={
+                "project_id": "abc123",
+                "title": "my new project",
+                "datasets": ["12"],
+                "auto_complete": "",
+                "cand_seq_full": "",
+                "cand_seq_prefix": "",
+                "candidates": [],
+                "classes": {
+                    "my-class": {
+                        "base_rate_given": 10,
+                        "base_rate_pdf": [1, 0, 0, 0],
+                        "class_type": "ftc",
+                        "confidences": [[0, "BaseRate"]],
+                        "description": {
+                            "error_rate": "Error rate computed over all plabels",
+                            "precision": (
+                                "Precision computed over hand_labels.\n"
+                                "Sum of plables for positively hand labeled examples."
+                            ),
+                            "recall": (
+                                "Recall computed over hand labels.\n"
+                                "Average plabel of the positively hand labeled "
+                                "examples."
+                            ),
+                        },
+                        "error_rate": [[0, "BaseRate"]],
+                        "hand_label_distribution_counts_negative": [0, 0, 0],
+                        "hand_label_distribution_counts_positive": [0, 0, 0],
+                        "label_distribution": [0, 0, 0],
+                        "label_distribution_counts": [0, 0, 0],
+                        "precision": [[0, "BaseRate"]],
+                        "recall": [[0, "BaseRate"]],
+                        "thresholds": [50, 50],
+                    }
+                },
+                "column_flags": {"inferenceable": [True, False, False]},
+                "disagreements": "",
+                "enrichment_tasks": "",
+                "error_msg": None,
+                "error_verb": None,
+                "export_preview": None,
+                "exports": [],
+                "field_names": [],
+                "hand_labels": [],
+                "hinters": [],
+                "is_shared": False,
+                "messages": [],
+                "n_candidates": "",
+                "n_handlabels": "",
+                "ner_hl_text": "",
+                "notifications": "",
+                "precision_candidate": "",
+                "project_config": "",
+                "published_title": "",
+                "pull_actions": "",
+                "push_actions": "",
+                "query": "",
+                "query_breakdown": "",
+                "query_completed": "",
+                "query_end": "",
+                "query_examined": "",
+                "query_full_rows": "",
+                "query_history": "",
+                "query_hit_count": "",
+                "query_page": "",
+                "selected_class": "",
+                "selections": "",
+                "show_notification_badge": "",
+                "state_seq": "",
+                "status": "current",
+                "suggestion": "",
+                "suggestions": "",
+                "unlabeled_candidate": "",
+            },
+        )
+
+        client = Client(URL_ROOT)
+        client.create_hinter("myHinter", "bareword", 65)
+
+        self.assertTrue(
+            responses.assert_call_count(urljoin(URL_ROOT, "api"), 2)
+        )
+
+    @responses.activate
+    def test_create_external_hinter(self):
+        """An external hinter is created."""
+        responses.add(
+            "POST",
+            urljoin(URL_ROOT, "api"),
+            json={
+                "project_id": "abc123",
+                "title": "my new project",
+                "datasets": ["12"],
+                "auto_complete": "",
+                "cand_seq_full": "",
+                "cand_seq_prefix": "",
+                "candidates": [],
+                "classes": {
+                    "my-class": {
+                        "base_rate_given": 10,
+                        "base_rate_pdf": [1, 0, 0, 0],
+                        "class_type": "ftc",
+                        "confidences": [[0, "BaseRate"]],
+                        "description": {
+                            "error_rate": "Error rate computed over all plabels",
+                            "precision": (
+                                "Precision computed over hand_labels.\n"
+                                "Sum of plables for positively hand labeled examples."
+                            ),
+                            "recall": (
+                                "Recall computed over hand labels.\n"
+                                "Average plabel of the positively hand labeled "
+                                "examples."
+                            ),
+                        },
+                        "error_rate": [[0, "BaseRate"]],
+                        "hand_label_distribution_counts_negative": [0, 0, 0],
+                        "hand_label_distribution_counts_positive": [0, 0, 0],
+                        "label_distribution": [0, 0, 0],
+                        "label_distribution_counts": [0, 0, 0],
+                        "precision": [[0, "BaseRate"]],
+                        "recall": [[0, "BaseRate"]],
+                        "thresholds": [50, 50],
+                    }
+                },
+                "column_flags": {"inferenceable": [True, False, False]},
+                "disagreements": "",
+                "enrichment_tasks": "",
+                "error_msg": None,
+                "error_verb": None,
+                "export_preview": None,
+                "exports": [],
+                "field_names": [],
+                "hand_labels": [],
+                "hinters": [],
+                "is_shared": False,
+                "messages": [],
+                "n_candidates": "",
+                "n_handlabels": "",
+                "ner_hl_text": "",
+                "notifications": "",
+                "precision_candidate": "",
+                "project_config": "",
+                "published_title": "",
+                "pull_actions": "",
+                "push_actions": "",
+                "query": "",
+                "query_breakdown": "",
+                "query_completed": "",
+                "query_end": "",
+                "query_examined": "",
+                "query_full_rows": "",
+                "query_history": "",
+                "query_hit_count": "",
+                "query_page": "",
+                "selected_class": "",
+                "selections": "",
+                "show_notification_badge": "",
+                "state_seq": "",
+                "status": "current",
+                "suggestion": "",
+                "suggestions": "",
+                "unlabeled_candidate": "",
+            },
+        )
+
+        client = Client(URL_ROOT)
+        client.create_external_hinter(
+            "myHinter", types.ClassificationType.FTC, 65
+        )
+
+        self.assertTrue(
+            responses.assert_call_count(urljoin(URL_ROOT, "api"), 2)
+        )
+
+    @responses.activate
+    def test_delete_hinter(self):
+        """A hinter is deleted."""
+        responses.add(
+            "POST",
+            urljoin(URL_ROOT, "api"),
+            json={
+                "project_id": "abc123",
+                "title": "my new project",
+                "datasets": ["12"],
+                "auto_complete": "",
+                "cand_seq_full": "",
+                "cand_seq_prefix": "",
+                "candidates": [],
+                "classes": {
+                    "my-class": {
+                        "base_rate_given": 10,
+                        "base_rate_pdf": [1, 0, 0, 0],
+                        "class_type": "ftc",
+                        "confidences": [[0, "BaseRate"]],
+                        "description": {
+                            "error_rate": "Error rate computed over all plabels",
+                            "precision": (
+                                "Precision computed over hand_labels.\n"
+                                "Sum of plables for positively hand labeled examples."
+                            ),
+                            "recall": (
+                                "Recall computed over hand labels.\n"
+                                "Average plabel of the positively hand labeled "
+                                "examples."
+                            ),
+                        },
+                        "error_rate": [[0, "BaseRate"]],
+                        "hand_label_distribution_counts_negative": [0, 0, 0],
+                        "hand_label_distribution_counts_positive": [0, 0, 0],
+                        "label_distribution": [0, 0, 0],
+                        "label_distribution_counts": [0, 0, 0],
+                        "precision": [[0, "BaseRate"]],
+                        "recall": [[0, "BaseRate"]],
+                        "thresholds": [50, 50],
+                    }
+                },
+                "column_flags": {"inferenceable": [True, False, False]},
+                "disagreements": "",
+                "enrichment_tasks": "",
+                "error_msg": None,
+                "error_verb": None,
+                "export_preview": None,
+                "exports": [],
+                "field_names": [],
+                "hand_labels": [],
+                "hinters": [],
+                "is_shared": False,
+                "messages": [],
+                "n_candidates": "",
+                "n_handlabels": "",
+                "ner_hl_text": "",
+                "notifications": "",
+                "precision_candidate": "",
+                "project_config": "",
+                "published_title": "",
+                "pull_actions": "",
+                "push_actions": "",
+                "query": "",
+                "query_breakdown": "",
+                "query_completed": "",
+                "query_end": "",
+                "query_examined": "",
+                "query_full_rows": "",
+                "query_history": "",
+                "query_hit_count": "",
+                "query_page": "",
+                "selected_class": "",
+                "selections": "",
+                "show_notification_badge": "",
+                "state_seq": "",
+                "status": "current",
+                "suggestion": "",
+                "suggestions": "",
+                "unlabeled_candidate": "",
+            },
+        )
+
+        client = Client(URL_ROOT)
+        client.delete_hinter(83)
+
+        self.assertTrue(
+            responses.assert_call_count(urljoin(URL_ROOT, "api"), 2)
+        )
