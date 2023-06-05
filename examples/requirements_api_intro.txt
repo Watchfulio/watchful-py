@@ -39,7 +39,7 @@ joblib==1.2.0
 jupyter_client==7.4.4
 jupyter_core==4.11.2
 kiwisolver==1.4.4
-konoha==4.6.5
+konoha==5.4.0
 langcodes==3.3.0
 langdetect==1.0.9
 lxml==4.9.2
