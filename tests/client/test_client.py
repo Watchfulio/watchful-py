@@ -195,7 +195,7 @@ class TestClient(unittest.TestCase):
         self.assertEqual("my new project", summary.title)
 
     @responses.activate
-    def test_flag_columns(self):
+    def test_flag_inference_columns(self):
         """Column flags are set."""
         responses.add(
             "POST",
@@ -252,12 +252,74 @@ class TestClient(unittest.TestCase):
 
         flags = [True, False, False]
         client = Client(URL_ROOT)
-        summary = client.flag_columns(flags)
+        summary = client.flag_columns(flags, "inferenceable")
 
         self.assertEqual({"inferenceable": flags}, summary.column_flags)
 
-    def test_flag_columns_not_inferenceable(self):
-        """Flags not explicitly titled "inferenceable" are not allowed."""
+    @responses.activate
+    def test_flag_enrich_columns(self):
+        """Column flags are set."""
+        responses.add(
+            "POST",
+            urljoin(URL_ROOT, "api"),
+            json={
+                "project_id": "abc123",
+                "title": "my new project",
+                "datasets": ["12"],
+                "auto_complete": "",
+                "cand_seq_full": "",
+                "cand_seq_prefix": "",
+                "candidates": [],
+                "classes": "",
+                "column_flags": {"enrichable": [True, False, True]},
+                "disagreements": "",
+                "enrichment_tasks": "",
+                "error_msg": None,
+                "error_verb": None,
+                "export_preview": None,
+                "exports": [],
+                "field_names": [],
+                "hand_labels": [],
+                "hinters": [],
+                "is_shared": False,
+                "messages": [],
+                "n_candidates": "",
+                "n_handlabels": "",
+                "ner_hl_text": "",
+                "notifications": "",
+                "precision_candidate": "",
+                "project_config": "",
+                "published_title": "",
+                "pull_actions": "",
+                "push_actions": "",
+                "query": "",
+                "query_breakdown": "",
+                "query_completed": "",
+                "query_end": "",
+                "query_examined": "",
+                "query_full_rows": "",
+                "query_history": "",
+                "query_hit_count": "",
+                "query_page": "",
+                "selected_class": "",
+                "selections": "",
+                "show_notification_badge": "",
+                "state_seq": "",
+                "status": "",
+                "suggestion": "",
+                "suggestions": "",
+                "unlabeled_candidate": "",
+            },
+        )
+
+        flags = [True, False, True]
+        client = Client(URL_ROOT)
+        summary = client.flag_columns(flags, "enrichable")
+
+        self.assertEqual({"enrichable": flags}, summary.column_flags)
+
+    def test_flag_columns_not_valid(self):
+        """Only "inferencable" and "enrichable" are valid flags."""
         client = Client(URL_ROOT)
 
         self.assertRaises(
