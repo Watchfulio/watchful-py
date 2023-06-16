@@ -1,5 +1,4 @@
 import enum
-from typing import TypeAlias, Literal
 
 
 # XXX: rockstar (22 May 2023) - This enum could
