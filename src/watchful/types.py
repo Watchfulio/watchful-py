@@ -10,6 +10,3 @@ class ClassificationType(enum.Enum):
 
     FTC = "ftc"
     NER = "ner"
-
-
-SupportedFlags: TypeAlias = Literal["inferenceable", "enrichable"]
