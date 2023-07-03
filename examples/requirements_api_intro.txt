@@ -109,6 +109,6 @@ wasabi==0.10.1
 watchful==1.2.0
 wcwidth==0.2.5
 wheel==0.40.0
-Wikipedia-API==0.5.4
+Wikipedia-API==0.6.0
 wrapt==1.14.1
 zipp==3.15.0
