@@ -13,6 +13,7 @@ from heapq import merge
 from multiprocessing import Pool
 from typing import Callable, Dict, List, Optional, Tuple
 import psutil
+import warnings
 from watchful import client, enricher
 
 
@@ -488,7 +489,16 @@ def load_spacy() -> Tuple:  # pragma: no cover
     :rtype: Tuple
     """
 
-    import spacy
+    try:
+        import spacy
+    except ModuleNotFoundError as e:
+        warnings.warn(
+            "You are attempting to use functionality that depends on 'enrich' extras. "
+            "Please install 'watchful[enrich]' to proceed.",
+            category=ImportWarning,
+            stacklevel=2,
+        )
+        raise e
 
     # nlp = spacy.load("en_core_web_sm", exclude=["parser"])
     nlp = spacy.load("en_core_web_sm")
@@ -565,9 +575,17 @@ def load_flair() -> Tuple:  # pragma: no cover
     :return: The tuple of Flair NLP objects.
     :rtype: Tuple
     """
-
-    from flair.data import Sentence
-    from flair.models import SequenceTagger
+    try:
+        from flair.data import Sentence
+        from flair.models import SequenceTagger
+    except ModuleNotFoundError as e:
+        warnings.warn(
+            "You are attempting to use functionality that depends on 'enrich' extras. "
+            "Please install 'watchful[enrich]' to proceed.",
+            category=ImportWarning,
+            stacklevel=2,
+        )
+        raise e
 
     # import logging
     # import warnings

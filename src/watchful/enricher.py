@@ -65,7 +65,7 @@ def set_enrich_fn_order(
     return __set_enrich_fn_order(enrich_fn)
 
 
-class Enricher(metaclass=ABCMeta):
+class Enricher(ABCMeta):
     """
     This is the abstract class that customized enricher classes should inherit,
     and then implement the abstract methods :meth:`__init__` and
