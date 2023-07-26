@@ -52,6 +52,9 @@ Install the latest published Watchful SDK.
     # Alternatively, install a specific Watchful SDK version if you need to.
     pip3 install watchful[==your.desired.version]
 
+    # If you intend to use the SpaCy or Flair enrichers that come with the library, specify the optional feature
+    pip3 install watchful[enrich]
+
     # Show the installed Watchful SDK.
     pip3 show watchful
 
