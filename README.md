@@ -21,6 +21,14 @@ If you want to use Python to communicate with the Watchful API, you'll need to i
 pip3 install watchful[==your.desired.version]
 ```
 
+#### Install Optional Dependencies for Enrichment
+
+If you intend to enrich using either SpaCy or Flair, you can take advantage of the enrichers we ship with the library. To do so, specify `enrich` when installing the library.
+
+```command
+pip3 install watchful[enrich]
+```
+
 ### Basic Usage
 
 Once you have installed the SDK, import it and begin interacting with it.

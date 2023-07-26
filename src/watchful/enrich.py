@@ -7,7 +7,6 @@ custom enricher is used, then the :func:`enrich_dataset` function is used.
 
 import argparse
 import datetime
-import importlib.util
 import os
 import pathlib
 import shutil
@@ -15,17 +14,6 @@ import sys
 from typing import Optional, List, Type, Sequence
 from watchful import client, attributes
 from watchful.enricher import Enricher
-
-
-def check_import(module: str) -> bool:
-    """
-    We use this function to check if spacy or flair are installed
-    without having to import them
-
-    :param module: The string name of the module
-    """
-    spec = importlib.util.find_spec(module)
-    return spec is not None
 
 
 def enrich_dataset(
@@ -287,9 +275,6 @@ def main(
             # of the dataset. ``spacy_atterize_fn``, ``spacy_atterize`` and
             # ``load_spacy()`` are the additional user variables to perform the
             # data enrichment.
-            if check_import("spacy") is False:
-                raise ModuleNotFoundError("SpaCy is not installed.")
-
             print(f"Using {args.standard_nlp} ...")
             print(f"Enriching {args.in_file} ...")
             attributes.enrich(
@@ -311,9 +296,6 @@ def main(
             # of the dataset. ``flair_atterize_fn``, ``flair_atterize`` and
             # ``*load_flair()`` are the additional user variables to perform the
             # data enrichment.
-            if check_import("flair") is False:
-                raise ModuleNotFoundError("Flair is not installed.")
-
             print(f"Using {args.standard_nlp} ...")
             print(f"Enriching {args.in_file} ...")
             attributes.enrich(
