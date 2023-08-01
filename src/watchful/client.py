@@ -1008,7 +1008,7 @@ def hint(name: str, offset: int, values: List[bool]) -> Optional[Dict]:
     TODO: Come up with a better streaming Python API here.
     """
 
-    values = list(map(lambda x: x, values))
+    values = list(map(lambda x: x and 1 or 0, values))
 
     return _assert_success(api("hint", name=name, offset=offset, values=values))
 
