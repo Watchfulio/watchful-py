@@ -1008,9 +1008,11 @@ def hint(name: str, offset: int, values: List[bool]) -> Optional[Dict]:
     TODO: Come up with a better streaming Python API here.
     """
 
-    values = list(map(lambda x: x, values))
+    cast_values = list(map(lambda x: int(x), values))
 
-    return _assert_success(api("hint", name=name, offset=offset, values=values))
+    return _assert_success(
+        api("hint", name=name, offset=offset, values=cast_values)
+    )
 
 
 def apply_hints(name: str) -> Optional[Dict]:
