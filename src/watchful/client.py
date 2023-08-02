@@ -1086,7 +1086,7 @@ def export_stream(
 
 
 def export_dataset_to_path(
-    out_file: str, fields: Optional[List[str]] = None
+    out_file: str, fields: Optional[List[str]] = None, export_mode: str = "ftc"
 ) -> None:
     """
     This function exports the original dataset via a buffered stream to the
@@ -1100,6 +1100,8 @@ def export_dataset_to_path(
     :type out_file: str
     :param fields: The list of column names to use for the dataset export.
     :type fields: List, optional
+    :param export_mode: Export mode for data. Accepted values are "ftc", "ner", and "data"
+    :type export_mode: str
     """
 
     if fields is None:
@@ -1108,7 +1110,7 @@ def export_dataset_to_path(
 
     with open(out_file, "w", encoding="utf-8") as f:
         writer = csv.writer(f)
-        stream = export_stream().raw
+        stream = export_stream(mode=export_mode).raw
         stream.auto_close = False
         reader = csv.reader(
             io.TextIOWrapper(stream, encoding="utf-8", newline="")
@@ -1124,7 +1126,7 @@ def export_dataset_to_path(
             writer.writerow(row[:n_cols])
 
 
-def export_async() -> Optional[Dict]:
+def export_async(export_mode: str = "ftc") -> Optional[Dict]:
     """
     This function exports the dataset. As it is asynchronous, the immediate HTTP
     response is likely not updated yet.
@@ -1133,10 +1135,10 @@ def export_async() -> Optional[Dict]:
     :rtype: Dict, optional
     """
 
-    return api("export", query="", content_type="text/csv")
+    return api("export", query="", content_type="text/csv", mode=export_mode)
 
 
-def export() -> Optional[Dict]:
+def export(export_mode: str = "ftc") -> Optional[Dict]:
     """
     This function exports the dataset and returns an updated HTTP response.
 
@@ -1145,7 +1147,7 @@ def export() -> Optional[Dict]:
     """
 
     n_exports = len(get()["exports"])
-    export_async()
+    export_async(export_mode)
 
     return await_summary(lambda s: len(s["exports"]) == n_exports + 1)
 
