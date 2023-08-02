@@ -863,33 +863,6 @@ def get() -> Dict:
     return api("nop")
 
 
-def external_hinter(class__: str, name: str, weight: int) -> Optional[Dict]:
-    """
-    This function creates an external hinter.
-
-    :param class__: The class for the hinter.
-    :type class__: str
-    :param name: The name for the hinter.
-    :type name: str
-    :param weight: The weight for the hinter.
-    :type weight: int
-    :return: The dictionary of the HTTP response from the connection request.
-    :rtype: Dict, optional
-    """
-
-    _assert_success(
-        api(
-            "hinter",
-            query="[external]",
-            name=name,
-            label=class__,
-            weight=weight,
-        )
-    )
-
-    return await_plabels()
-
-
 def upload_attributes(
     dataset_id: str,
     attributes_filepath: str,
@@ -990,59 +963,6 @@ def dump_dicts() -> Generator[Dict[str, str], None, None]:
     field_names = get()["field_names"]
     for c in dump():
         yield dict(zip(field_names, c))
-
-
-def hint(name: str, offset: int, values: List[bool]) -> Optional[Dict]:
-    """
-    This function adds the hints for an external hinter.
-
-    :param name: The hinter name.
-    :type name: str
-    :param offset: The offset.
-    :type offset: int
-    :param values: The hints.
-    :type values: List[bool]
-    :return: The dictionary of the HTTP response from the connection request.
-    :rtype: Dict, optional
-
-    TODO: Come up with a better streaming Python API here.
-    """
-
-    values = list(map(lambda x: x, values))
-
-    return _assert_success(api("hint", name=name, offset=offset, values=values))
-
-
-def apply_hints(name: str) -> Optional[Dict]:
-    """
-    This function applies the hints for an external hinter.
-
-    :param name: The hinter name.
-    :type name: str
-    :return: The dictionary of the HTTP response from the connection request.
-    :rtype: Dict, optional
-    """
-
-    _assert_success(api("apply_hints", name=name))
-
-    return await_plabels()
-
-
-def hint_all(name: str, values: List[bool]) -> Optional[Dict]:
-    """
-    This function applies the hints for an external hinter.
-
-    :param name: The hinter name.
-    :type name: str
-    :param values: The hints.
-    :type values: List[bool]
-    :return: The dictionary of the HTTP response from the connection request.
-    :rtype: Dict, optional
-    """
-
-    hint(name, 0, values)
-
-    return apply_hints(name)
 
 
 def export_stream(
