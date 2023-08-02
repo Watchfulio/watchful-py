@@ -1100,7 +1100,7 @@ def export_dataset_to_path(
     :type out_file: str
     :param fields: The list of column names to use for the dataset export.
     :type fields: List, optional
-    :param export_mode: Export mode for data. Accepted values are "ftc", "ner", and "data"
+    :param export_mode: Allowed values - "ftc", "ner", and "data"
     :type export_mode: str
     """
 
