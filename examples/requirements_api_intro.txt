@@ -23,7 +23,7 @@ flair==0.12.2
 fonttools==4.38.0
 ftfy==6.1.1
 future==0.18.3
-gdown==4.5.3
+gdown==4.7.1
 gensim==4.3.1
 huggingface-hub==0.14.1
 hyperopt==0.2.7
