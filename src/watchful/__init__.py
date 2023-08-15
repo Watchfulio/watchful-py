@@ -55,7 +55,6 @@ from .client import (
     config,
     set_hub_url,
     candidate_dicts,
-    exit_backend,
     hub_api,
     login,
     publish,

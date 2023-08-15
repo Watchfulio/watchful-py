@@ -1371,21 +1371,6 @@ def candidate_dicts(summary: Optional[Dict] = None) -> List[Dict[str, str]]:
     )
 
 
-def exit_backend() -> None:
-    """
-    This function exits the backend. Note that the API call will usually fail
-    because the backend exits before returning a HTTP response so we suppress
-    the error. This is useful locally, for tests, and during development, but
-    not in dockerized Watchful application instances.
-    """
-
-    try:
-        api("exit")
-    # see docstring above
-    except requests.exceptions.ConnectionError:
-        pass
-
-
 ## Hub API
 
 
