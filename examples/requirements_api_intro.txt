@@ -25,7 +25,7 @@ ftfy==6.1.1
 future==0.18.3
 gdown==4.7.1
 gensim==4.3.1
-huggingface-hub==0.14.1
+huggingface-hub==0.16.4
 hyperopt==0.2.7
 idna==3.4
 importlib-metadata==6.1.0
