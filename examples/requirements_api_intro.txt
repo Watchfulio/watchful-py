@@ -56,7 +56,7 @@ numpy==1.24.2
 overrides==7.4.0
 packaging==21.3
 parso==0.8.3
-pathy==0.10.1
+pathy==0.10.2
 pexpect==4.8.0
 pickleshare==0.7.5
 Pillow==9.3.0
