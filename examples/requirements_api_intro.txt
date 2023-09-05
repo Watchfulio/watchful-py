@@ -68,7 +68,7 @@ psutil==5.9.3
 ptyprocess==0.7.0
 pure-eval==0.2.2
 py4j==0.10.9.7
-pydantic==1.10.7
+pydantic==2.3.0
 Pygments==2.16.1
 pyparsing==3.0.9
 PySocks==1.7.1
