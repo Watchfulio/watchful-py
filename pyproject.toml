@@ -8,7 +8,7 @@ dynamic = ["version"]
 description = "Watchful API for Interacting with Watchful Environment"
 readme = "README.md"
 license = "MIT"
-requires-python = ">=3.7"
+requires-python = ">=3.8"
 authors = [
     { name = "Watchful", email = "engineering@watchful.io" },
     { name = "Inc." },
@@ -24,6 +24,7 @@ classifiers = [
 dependencies = [
     "chardet>=5.1.0",
     "psutil>=5.9.2",
+    "requests>=2.23.0",
 ]
 
 [project.optional-dependencies]
