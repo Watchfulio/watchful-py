@@ -107,7 +107,7 @@ traitlets==5.11.2
 transformers==4.31.0
 typer==0.7.0
 typing_extensions==4.7.1
-urllib3==2.0.6
+urllib3==2.0.7
 wasabi==1.1.2
 watchful==1.2.0
 wcwidth==0.2.5
