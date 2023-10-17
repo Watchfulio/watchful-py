@@ -48,7 +48,7 @@ matplotlib==3.6.2
 matplotlib-inline==0.1.6
 more-itertools==10.1.0
 mpld3==0.3
-murmurhash==1.0.9
+murmurhash==1.0.10
 nest-asyncio==1.5.6
 networkx==3.1
 nltk==3.8.1
