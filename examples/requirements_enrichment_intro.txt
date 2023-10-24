@@ -86,7 +86,7 @@ segtok==1.5.11
 sentencepiece==0.1.98
 setuptools==68.2.2
 six==1.16.0
-smart-open==6.3.0
+smart-open==6.4.0
 soupsieve==2.5
 spacy==3.6.0
 spacy-legacy==3.0.12
