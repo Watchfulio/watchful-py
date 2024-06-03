@@ -108,7 +108,7 @@ urllib3==2.0.7
 wasabi==1.1.2
 watchful==3.7.0
 wcwidth==0.2.5
-wheel==0.41.0
+wheel==0.43.0
 Wikipedia-API==0.5.4
 wrapt==1.14.1
 zipp==3.17.0
