@@ -382,27 +382,6 @@ def external(
     TOKEN = token
 
 
-def set_token(token: str) -> None:
-    """
-    This function sets the global ``TOKEN`` value.
-
-    :param token: The token.
-    :type token: str
-    """
-
-    global TOKEN
-    TOKEN = token
-
-
-def clear_token() -> None:
-    """
-    This function clears the global ``TOKEN`` value.
-    """
-
-    global TOKEN
-    TOKEN = None
-
-
 def list_projects() -> List[Dict[str, Union[str, bool]]]:
     """
     This function lists the available projects.
@@ -1454,7 +1433,8 @@ def login(email: str, password: str) -> Optional[Dict]:
         timeout=API_TIMEOUT_SEC,
     )
     resp = _read_response(response)
-    set_token(resp["token"])
+    global TOKEN
+    TOKEN = resp["token"]
 
     return _assert_success(resp)
 
