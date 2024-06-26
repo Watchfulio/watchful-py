@@ -265,7 +265,7 @@ def request(
     """
     default_headers = {"x-watchful-sdk": __version__}
     if TOKEN is not None:
-        default_headers["Authorization"] = f"Bearer {TOKEN}"
+        default_headers["Authorization"] = "Bearer {TOKEN}"
 
     if headers is None:
         headers = {}
@@ -366,6 +366,8 @@ def external(
     :type port: str, optional
     :param scheme: The scheme, either "http" or "https", defaults to "http".
     :type scheme: str, optional
+    :param token: The JWT authorization token, defaults to None.
+    :type token: str, optional
     """
 
     assert scheme in [
@@ -373,7 +375,7 @@ def external(
         "https",
     ], '`scheme` must be either "http" or "https"!'
 
-    global SCHEME, HOST, PORT
+    global SCHEME, HOST, PORT, TOKEN
     SCHEME = scheme
     HOST = host
     PORT = port
