@@ -14,6 +14,8 @@ from .client import (
     api_send_action,
     ephemeral,
     external,
+    set_token,
+    clear_token,
     list_projects,
     open_project,
     create_project,
