@@ -2,7 +2,6 @@
 This script is run on the Python command line to execute data enrichment. If a
 custom enricher is used, then the :func:`enrich_dataset` function is used.
 """
-
 ################################################################################
 
 

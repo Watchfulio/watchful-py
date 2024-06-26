@@ -1,5 +1,4 @@
 """Watchful python library"""
-
 # ruff: noqa: F401
 
 # We need to be careful of unintended overriding, and also a deeper
