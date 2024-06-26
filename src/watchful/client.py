@@ -1453,8 +1453,10 @@ def login(email: str, password: str) -> Optional[Dict]:
         headers=headers,
         timeout=API_TIMEOUT_SEC,
     )
+    resp = _read_response(response)
+    set_token(resp["token"])
 
-    return _assert_success(_read_response(response))
+    return _assert_success(resp)
 
 
 def publish(token: str) -> Optional[Dict]:
