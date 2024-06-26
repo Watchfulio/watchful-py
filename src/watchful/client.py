@@ -37,6 +37,7 @@ SCHEME: Literal["http", "https"] = "http"
 HOST: str = "localhost"
 PORT: Optional[str] = "9002"
 API_TIMEOUT_SEC: int = 600
+TOKEN: Optional[str] = None
 
 
 def _refresh() -> None:
@@ -263,6 +264,8 @@ def request(
     :rtype: requests.models.Response
     """
     default_headers = {"x-watchful-sdk": __version__}
+    if TOKEN is not None:
+        default_headers["Authorization"] = f"Bearer {TOKEN}"
 
     if headers is None:
         headers = {}
@@ -352,6 +355,7 @@ def external(
     host: str = "localhost",
     port: str = "9001",
     scheme: Literal["http", "https"] = "http",
+    token: Optional[str] = None
 ) -> None:
     """
     This function changes the global ``HOST``, ``PORT`` and ``SCHEME`` values.
@@ -373,6 +377,28 @@ def external(
     SCHEME = scheme
     HOST = host
     PORT = port
+    TOKEN = token
+
+
+def set_token(token: str) -> None:
+    """
+    This function sets the global ``TOKEN`` value.
+
+    :param token: The token.
+    :type token: str
+    """
+
+    global TOKEN
+    TOKEN = token
+
+
+def clear_token() -> None:
+    """
+    This function clears the global ``TOKEN`` value.
+    """
+
+    global TOKEN
+    TOKEN = None
 
 
 def list_projects() -> List[Dict[str, Union[str, bool]]]:
