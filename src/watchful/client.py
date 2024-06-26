@@ -264,8 +264,9 @@ def request(
     :rtype: requests.models.Response
     """
     default_headers = {"x-watchful-sdk": __version__}
+    global TOKEN
     if TOKEN is not None:
-        default_headers["Authorization"] = "Bearer {TOKEN}"
+        default_headers["Authorization"] = f"Bearer {TOKEN}"
 
     if headers is None:
         headers = {}
