@@ -355,7 +355,7 @@ def external(
     host: str = "localhost",
     port: str = "9001",
     scheme: Literal["http", "https"] = "http",
-    token: Optional[str] = None
+    token: Optional[str] = None,
 ) -> None:
     """
     This function changes the global ``HOST``, ``PORT`` and ``SCHEME`` values.
