@@ -225,7 +225,7 @@ def _read_response(
     # the assertion is here because that's what our API endpoints always return
     assert (
         200 == response.status_code
-    ), f"Request could have failed with status {response.status_code}."
+    ), f"Request could have failed with status {response.status_code}. Reason: {response.reason}"
     json_str = response.text
 
     if response_is_summary and API_SUMMARY_HOOK_CALLBACK:
