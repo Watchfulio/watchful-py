@@ -131,7 +131,7 @@ def main(
         "--token",
         type=str,
         default=None,
-        help="Optional JWT token for Watchful"
+        help="Optional JWT token for Watchful",
     )
 
     # The out-of-the-box NLP to use if no ``attr_file`` is provided.
