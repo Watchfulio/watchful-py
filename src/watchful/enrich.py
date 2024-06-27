@@ -128,7 +128,10 @@ def main(
     )
 
     parser.add_argument(
-        "--token", type=str, default=None, help="Optional JWT token for Watchful"
+        "--token",
+        type=str,
+        default=None,
+        help="Optional JWT token for Watchful"
     )
 
     # The out-of-the-box NLP to use if no ``attr_file`` is provided.
