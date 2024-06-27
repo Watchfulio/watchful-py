@@ -59,7 +59,7 @@ include = [
 type = "virtual"
 path = ".hatch-env"
 dependencies = [
-    "black",
+    "black ~= 23.0",
     "mypy",
     "nose-py3",
     "pytest",

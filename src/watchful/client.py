@@ -37,6 +37,7 @@ SCHEME: Literal["http", "https"] = "http"
 HOST: str = "localhost"
 PORT: Optional[str] = "9002"
 API_TIMEOUT_SEC: int = 600
+TOKEN: Optional[str] = None
 
 
 def _refresh() -> None:
@@ -224,7 +225,7 @@ def _read_response(
     # the assertion is here because that's what our API endpoints always return
     assert (
         200 == response.status_code
-    ), f"Request could have failed with status {response.status_code}."
+    ), f"Request could have failed with status {response.status_code}. Reason: {response.reason}"
     json_str = response.text
 
     if response_is_summary and API_SUMMARY_HOOK_CALLBACK:
@@ -263,6 +264,9 @@ def request(
     :rtype: requests.models.Response
     """
     default_headers = {"x-watchful-sdk": __version__}
+    global TOKEN
+    if TOKEN is not None:
+        default_headers["Authorization"] = f"Bearer {TOKEN}"
 
     if headers is None:
         headers = {}
@@ -352,6 +356,7 @@ def external(
     host: str = "localhost",
     port: str = "9001",
     scheme: Literal["http", "https"] = "http",
+    token: Optional[str] = None,
 ) -> None:
     """
     This function changes the global ``HOST``, ``PORT`` and ``SCHEME`` values.
@@ -362,6 +367,8 @@ def external(
     :type port: str, optional
     :param scheme: The scheme, either "http" or "https", defaults to "http".
     :type scheme: str, optional
+    :param token: The JWT authorization token, defaults to None.
+    :type token: str, optional
     """
 
     assert scheme in [
@@ -369,10 +376,11 @@ def external(
         "https",
     ], '`scheme` must be either "http" or "https"!'
 
-    global SCHEME, HOST, PORT
+    global SCHEME, HOST, PORT, TOKEN
     SCHEME = scheme
     HOST = host
     PORT = port
+    TOKEN = token
 
 
 def list_projects() -> List[Dict[str, Union[str, bool]]]:
@@ -1425,8 +1433,11 @@ def login(email: str, password: str) -> Optional[Dict]:
         headers=headers,
         timeout=API_TIMEOUT_SEC,
     )
+    resp = _read_response(response)
+    global TOKEN
+    TOKEN = resp["token"]
 
-    return _assert_success(_read_response(response))
+    return _assert_success(resp)
 
 
 def publish(token: str) -> Optional[Dict]:
