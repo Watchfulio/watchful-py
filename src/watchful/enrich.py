@@ -162,7 +162,9 @@ def main(
 
     attributes.set_multiprocessing(args.multiprocessing)
 
-    client.external(host=args.host, port=args.port, scheme=args.scheme, token=args.token)
+    client.external(
+        host=args.host, port=args.port, scheme=args.scheme, token=args.token
+    )
 
     summary = client.get()
     project_id = client.get_project_id(summary)
