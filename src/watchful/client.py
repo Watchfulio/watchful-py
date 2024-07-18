@@ -12,7 +12,6 @@ import socket
 import subprocess
 import sys
 import time
-import urllib
 from typing import (
     Any,
     Callable,
