@@ -1005,14 +1005,12 @@ def export_stream(
     :rtype: requests.models.Response
     """
 
-    _content_type = urllib.parse.quote_plus(content_type)
-    _mode = urllib.parse.quote_plus(mode)
     if token is None:
         token = TOKEN
 
     query = {
-        "content-type": _content_type,
-        "mode": _mode,
+        "content-type": content_type,
+        "mode": mode,
         "token": token,
     }
     if filename is not None:
