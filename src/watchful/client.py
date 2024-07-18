@@ -24,7 +24,6 @@ from typing import (
     Union,
     Mapping,
 )
-from urllib.parse import urlencode
 from uuid import uuid4
 
 import chardet
@@ -1010,15 +1009,9 @@ def export_stream(
     if token is None:
         token = TOKEN
 
-    query = {
-        "content-type": _content_type,
-        "mode": _mode,
-        "token": token,
-    }
+    url = f"/export_stream?content-type={_content_type}&mode={_mode}&token={token}"
     if filename is not None:
-        query["filename"] = filename
-    query_string = urlencode(query)
-    url = f"/export_stream?{query_string}"
+        url += f"&filename={filename}"
     response = request(
         "GET",
         url,
