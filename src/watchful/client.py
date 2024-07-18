@@ -24,6 +24,7 @@ from typing import (
     Union,
     Mapping,
 )
+from urllib.parse import urlencode
 from uuid import uuid4
 
 import chardet
@@ -976,6 +977,8 @@ def dump_dicts() -> Generator[Dict[str, str], None, None]:
 def export_stream(
     content_type: str = "text/csv",
     mode: str = "ftc",
+    filename: Optional[str] = None,
+    token: Optional[str] = None,
 ) -> requests.models.Response:
     """
     This function begins the export using the export_stream call. The result is
@@ -993,15 +996,32 @@ def export_stream(
     :param mode: The mode of the export, it can be either "ftc" or "ner",
         defaults to "ftc".
     :type mode: str, optional
+    :param filename: The optional filename to use for the export, defaults to
+        None.
+    :type filename: str, optional
+    :param token: The JWT authorization token, defaults to None.
+    :type token: str, optional
     :return: The HTTP response from the connection request.
     :rtype: requests.models.Response
     """
 
     _content_type = urllib.parse.quote_plus(content_type)
     _mode = urllib.parse.quote_plus(mode)
+    if token is None:
+        token = TOKEN
+
+    query = {
+        "content-type": _content_type,
+        "mode": _mode,
+        "token": token,
+    }
+    if filename is not None:
+        query["filename"] = filename
+    query_string = urlencode(query)
+    url = f"/export_stream?{query_string}"
     response = request(
         "GET",
-        f"/export_stream?content-type={_content_type}&mode={_mode}",
+        url,
         stream=True,
         timeout=API_TIMEOUT_SEC,
     )
