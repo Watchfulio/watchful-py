@@ -24,7 +24,6 @@ from typing import (
     Union,
     Mapping,
 )
-from urllib.parse import urlencode
 from uuid import uuid4
 
 import chardet
