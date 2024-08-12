@@ -515,23 +515,3 @@ class Client:
             return response.json()
         except ValueError:
             return response.text
-
-    def register(
-        self, username: str, email: str, password: str, role: str
-    ) -> typing.Union[str, str]:
-        """Register with hub."""
-        response = self._session.post(
-            urljoin(self._root_url, "remote"),
-            json={
-                "verb": "register",
-                "username": username,
-                "email": email,
-                "password": password,
-                "role": role,
-            },
-            timeout=self.timeout,
-        )
-        try:
-            return response.json()
-        except ValueError:
-            return response.text

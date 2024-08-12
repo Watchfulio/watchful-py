@@ -1426,6 +1426,33 @@ def hub_api(verb: str, token: str) -> Optional[Dict]:
     return _assert_success(_read_response(response))
 
 
+def hub_api_with_data(token: str, data: Dict) -> Optional[Dict]:
+    """
+    This is a convenience function for collaboration API calls with Watchful;
+    made up of a verb, a token and optional keyword arguments.
+
+    :param verb: The verb for the hub API.
+    :type verb: str
+    :param verb: The user's auth token.
+    :type token: str
+    :param data: The data to be sent to the hub API.
+    :type data: Dict
+    :return: The dictionary of the HTTP response from the connection request.
+    :rtype: Dict, optional
+    """
+
+    headers = {"Content-Type": "application/json"}
+    headers.update({"Authorization": "Bearer " + token})
+    response = request(
+        "POST",
+        "/remote",
+        data=json.dumps(data),
+        headers=headers,
+        timeout=API_TIMEOUT_SEC,
+    )
+    return _assert_success(_read_response(response))
+
+
 def login(email: str, password: str) -> Optional[Dict]:
     """
     This function performs login with the email and password with Watchful hub.
@@ -1533,6 +1560,36 @@ def whoami(token: str) -> Optional[Dict]:
     """
 
     return hub_api("whoami", token)
+
+
+def register(
+    token: str, username: str, email: str, password: str, role: str
+) -> Optional[Dict]:
+    """
+    This function performs register with Watchful hub.
+
+    :param username: The user's username.
+    :type username: str
+    :param email: The user's email.
+    :type email: str
+    :param password: The user's password.
+    :type password: str
+    :param role: The user's role.
+    :type role: str
+    :return: The dictionary of the HTTP response from the connection request.
+    :rtype: Dict, optional
+    """
+
+    return hub_api_with_data(
+        token,
+        {
+            "verb": "register",
+            "username": username,
+            "email": email,
+            "password": password,
+            "role": role,
+        },
+    )
 
 
 class WatchfulAppInstanceError(Exception):
