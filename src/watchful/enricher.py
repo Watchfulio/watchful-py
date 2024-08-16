@@ -5,6 +5,7 @@ custom data enrichment functions and models within :meth:`enrich_fn`. Refer to
 https://github.com/Watchfulio/watchful-py/blob/main/examples/enrichment_intro.ipynb
 for a tutorial on how to implement your custom enricher class.
 """
+
 ################################################################################
 
 
