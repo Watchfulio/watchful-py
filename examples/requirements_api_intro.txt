@@ -111,4 +111,4 @@ wcwidth==0.2.5
 wheel==0.41.0
 Wikipedia-API==0.5.4
 wrapt==1.14.1
-zipp==3.17.0
+zipp==3.19.1
