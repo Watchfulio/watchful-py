@@ -189,7 +189,10 @@ def main(
             working_dir = os.path.join(user_home_path, "watchful", "working")
             os.makedirs(working_dir, exist_ok=True)
             args.in_file = os.path.join(working_dir, dataset_id)
-            client.export_dataset_to_path(args.in_file, summary["field_names"])
+            column_names = []
+            for column in summary["columns"]:
+                column_names.append(column["column_name"])
+            client.export_dataset_to_path(args.in_file, column_names)
         else:
             print(
                 'in_file must be initially "" for enrichment to a remote '
