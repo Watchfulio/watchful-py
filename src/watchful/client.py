@@ -1060,8 +1060,9 @@ def export_dataset_to_path(
         writer = csv.writer(f)
         stream = export_stream(mode=export_mode).raw
         stream.auto_close = False
+        byte_stream = io.BytesIO(stream.read())
         reader = csv.reader(
-            io.TextIOWrapper(stream, encoding="utf-8", newline="")
+            io.TextIOWrapper(byte_stream, encoding="utf-8", newline="")
         )
         header = next(reader)
         if header[:n_cols] != fields:
