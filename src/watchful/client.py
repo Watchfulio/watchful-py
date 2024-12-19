@@ -627,7 +627,10 @@ def set_column_flag(
     :rtype: Dict, optional
     """
 
-    col_names = get()["field_names"]
+    summary_columns = get()["columns"]
+    col_names = []
+    for column in summary_columns:
+        col_names.append(column["column_name"])
     n_col_names = len(col_names)
 
     if columns is None:
@@ -1057,8 +1060,9 @@ def export_dataset_to_path(
         writer = csv.writer(f)
         stream = export_stream(mode=export_mode).raw
         stream.auto_close = False
+        byte_stream = io.BytesIO(stream.read())
         reader = csv.reader(
-            io.TextIOWrapper(stream, encoding="utf-8", newline="")
+            io.TextIOWrapper(byte_stream, encoding="utf-8", newline="")
         )
         header = next(reader)
         if header[:n_cols] != fields:
@@ -1290,7 +1294,9 @@ def label_single(row: List[str]) -> List[str]:
     rdr = csv.reader(csv_str)
     rdr_list = list(rdr)
     if len(rdr_list) == 2:
-        fields = get()["field_names"]
+        fields = []
+        for col in get()["columns"]:
+            fields.append(col["column_name"])
         assert (
             fields == rdr_list[0][: len(fields)]
         ), "server prepended the header to the labeled row"
