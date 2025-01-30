@@ -289,9 +289,13 @@ def request(
         return requests.put(
             path, headers=headers, data=data, timeout=timeout, stream=stream
         )
+    elif method == "DELETE":
+        return requests.delete(
+            path, headers=headers, data=data, timeout=timeout, stream=stream
+        )
     else:
         raise ValueError(
-            f"{method} is not one of the currently implemented methods: GET, POST, PUT!"
+            f"{method} is not one of the currently implemented methods: GET, POST, PUT, DELETE!"
         )
 
 
