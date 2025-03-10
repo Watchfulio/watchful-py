@@ -68,7 +68,7 @@ def main(
 
     # The ID of the dataset to enrich.
     parser.add_argument(
-        "--dataset-id",
+        "--dataset_id",
         type=str,
         required=True,
         help="Watchful identifier of the dataset to enrich.",
