@@ -66,6 +66,14 @@ def main(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
 
+    # The ID of the dataset to enrich.
+    parser.add_argument(
+        "--dataset-id",
+        type=str,
+        required=True,
+        help="Watchful identifier of the dataset to enrich.",
+    )
+
     # The dataset file; use the dataset currently opened in Watchful if it is
     # not provided. This is not used in remote enrichment as we will retrieve
     # the dataset from the remote Watchful application.
@@ -173,10 +181,9 @@ def main(
     summary = client.get()
     project_id = client.get_project_id(summary)
     (
-        dataset_id,
         datasets_dir,
         args.in_file,
-    ) = attributes.get_dataset_id_dir_filepath(
+    ) = attributes.get_dataset_dir_filepath(
         summary, args.in_file, args.is_local
     )
 
@@ -188,7 +195,7 @@ def main(
             user_home_path = os.path.expanduser("~")
             working_dir = os.path.join(user_home_path, "watchful", "working")
             os.makedirs(working_dir, exist_ok=True)
-            args.in_file = os.path.join(working_dir, dataset_id)
+            args.in_file = os.path.join(working_dir, args.dataset_id)
             column_names = []
             for column in summary["columns"]:
                 column_names.append(column["column_name"])
@@ -368,13 +375,6 @@ def main(
             f"enriched project {project_id}!"
         )
         sys.exit(1)
-    current_dataset_id = client.get_dataset_id(summary)
-    if dataset_id != current_dataset_id:
-        print(
-            f"Current dataset {current_dataset_id} is different from the "
-            f"enriched dataset {dataset_id}!"
-        )
-        sys.exit(1)
 
     # Format the attributes file timestamp as "yyyy-mm-dd_hh-mm-ss-ssssss".
     # Use the full timestamp for completeness; though it's reasonable
@@ -420,16 +420,16 @@ def main(
         # Arguments:
         #     id: dataset id
         #     filepath: attributes filepath
-        res = client.load_attributes(dataset_id, dest_attr_filename)
+        res = client.load_attributes(args.dataset_id, dest_attr_filename)
 
     # Upload the created attributes output file to Watchful application if it is
     # remote.
     else:
-        res = client.upload_attributes(dataset_id, args.out_file)
+        res = client.upload_attributes(args.dataset_id, args.out_file)
 
     msg = (
         f"attributes via watchful {args.host}:{args.port} to dataset "
-        f"id {dataset_id}."
+        f"id {args.dataset_id}."
     )
     if "error_msg" in res and res["error_msg"]:
         print(f"Error ingesting {msg}")
