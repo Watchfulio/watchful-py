@@ -184,7 +184,7 @@ def main(
         datasets_dir,
         args.in_file,
     ) = attributes.get_dataset_dir_filepath(
-        summary, args.in_file, args.is_local
+        args.dataset_id, summary, args.in_file, args.is_local
     )
 
     # ``args.in_file`` will still be returned as "" if Watchful application is

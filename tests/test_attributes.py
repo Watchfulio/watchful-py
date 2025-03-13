@@ -1,5 +1,6 @@
 import unittest
 from unittest import mock
+import unittest.mock
 
 from watchful import attributes
 
@@ -161,3 +162,19 @@ class TestWriter(unittest.TestCase):
             expected_calls,
             write_mock.write.mock_calls,
         )
+
+
+class TestDatasets(unittest.TestCase):
+    @unittest.mock.patch(
+        "watchful.client.open", unittest.mock.mock_open(read_data="abc123")
+    )
+    @unittest.mock.patch("watchful.client.os.path.isfile")
+    def test_get_dataset_dir_filepath(self, isfile):
+        isfile.return_value = True
+
+        summary = {"watchful_home": "/path/to/watchful"}
+
+        (path, file) = attributes.get_dataset_dir_filepath("abc123", summary)
+
+        self.assertEqual("/path/to/watchful/datasets", path)
+        self.assertEqual("/path/to/watchful/datasets/raw/abc123", file)
