@@ -157,7 +157,7 @@ class TestWriter(unittest.TestCase):
             ]
         )
 
-        self.assertEquals(
+        self.assertEqual(
             expected_calls,
             write_mock.write.mock_calls,
         )

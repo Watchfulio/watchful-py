@@ -1151,7 +1151,7 @@ def get_context(attribute_filename: str) -> Tuple[str, str, str]:
     summary = client.get()
     attrs_dir = os.path.join(summary["watchful_home"], "datasets", "attrs")
     os.makedirs(attrs_dir, exist_ok=True)
-    _, _, in_file = get_dataset_id_dir_filepath(summary)
+    _, in_file = get_dataset_dir_filepath(summary)
     in_filename = os.path.basename(in_file)
     out_file = os.path.join(
         attrs_dir, f"{in_filename}_{attribute_filename}.attrs"
@@ -1160,11 +1160,11 @@ def get_context(attribute_filename: str) -> Tuple[str, str, str]:
     return in_file, out_file, out_filename
 
 
-def get_dataset_id_dir_filepath(
+def get_dataset_dir_filepath(
     summary: Dict,
     in_file: Optional[str] = "",
     is_local: Optional[bool] = True,
-) -> Tuple[str, str, str]:
+) -> Tuple[str, str]:
     """
     This function returns the id, directory and filepath of the currently opened
     dataset.
@@ -1177,12 +1177,11 @@ def get_dataset_id_dir_filepath(
     :param is_local: Boolean indicating whether the Watchful application is
         local (otherwise hosted), defaults to True.
     :type is_local: bool, optional
-    :return: The id, directory and filepath of the currently opened dataset.
-    :rtype: Tuple[str, str, str]
+    :return: The directory and filepath of the currently opened dataset.
+    :rtype: Tuple[str, str]
     """
 
     summary = client._assert_success(summary)
-    dataset_id = client.get_dataset_id(summary)
     datasets_dir = client.get_datasets_dir(summary, is_local)
 
     if in_file != "":
@@ -1193,4 +1192,4 @@ def get_dataset_id_dir_filepath(
     else:
         dataset_filepath = client.get_dataset_filepath(summary, is_local)
 
-    return dataset_id, datasets_dir, dataset_filepath
+    return datasets_dir, dataset_filepath

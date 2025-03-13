@@ -478,30 +478,6 @@ def get_project_id(summary: Dict) -> str:
     raise WatchfulAppInstanceError("No project is currently active.")
 
 
-def get_dataset_id(summary: Dict) -> str:
-    """
-    This function gets the active dataset id from ``summary``. For correctness,
-    we use the ``summary`` that has been success asserted via
-    ``_assert_success``.
-
-    :param summary: The dictionary of the HTTP response from a connection
-        request.
-    :type summary: Dict
-    :return: The dataset id.
-    :rtype: str
-    """
-
-    if "datasets" in summary:
-        # ``dataset_ids`` should either be empty or contain one dataset id.
-        dataset_ids = summary["datasets"]
-        if len(dataset_ids) == 0:
-            raise WatchfulAppInstanceError("No dataset is currently opened.")
-        dataset_id = dataset_ids[0]
-        return dataset_id
-
-    raise WatchfulAppInstanceError("`datasets` is currently not available.")
-
-
 def get_watchful_home(summary: Dict, is_local: bool = True) -> str:
     """
     This function gets Watchful home from ``summary``. For correctness, we use
@@ -552,13 +528,17 @@ def get_datasets_dir(summary: Dict, is_local: bool = True) -> str:
     return datasets_dir
 
 
-def get_dataset_filepath(summary: Dict, is_local: bool = True) -> str:
+def get_dataset_filepath(
+    dataset_id: str, summary: Dict, is_local: bool = True
+) -> str:
     """
     This function infers the datasets filepath from ``summary``. For
     correctness, we use the summary that has been success asserted via
     ``_assert_success``. As this function uses file operations, it does not work
     when the Watchful application is remote, and in such case returns "".
 
+    :param dataset_id: The dataset ID corresponding to ``summary``.
+    :type dataset_id: str
     :param summary: The dictionary of the HTTP response from a connection
         request.
     :type summary: Dict
@@ -573,7 +553,6 @@ def get_dataset_filepath(summary: Dict, is_local: bool = True) -> str:
         return ""
 
     datasets_dir = get_datasets_dir(summary, is_local)
-    dataset_id = get_dataset_id(summary)
     dataset_ref_path = os.path.join(datasets_dir, "refs", dataset_id)
 
     # Check that ``dataset_ref_path`` exists.

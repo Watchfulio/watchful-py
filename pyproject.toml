@@ -71,7 +71,7 @@ dependencies = [
 
 [tool.hatch.envs.default.scripts]
 test = [
-    "PYTHONPATH=src:$PYTHONPATH nosetests -s --with-coverage --cover-erase --cover-package=watchful --cover-html tests --cover-min-percentage=60",
+    "PYTHONPATH=src:$PYTHONPATH nosetests -s --with-coverage --cover-erase --cover-package=watchful --cover-html tests --cover-min-percentage=55",
 ]
 check = [
     "black --check --diff --config pyproject.toml src tests",

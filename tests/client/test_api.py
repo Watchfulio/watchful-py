@@ -145,31 +145,6 @@ class TestClient(unittest.TestCase):
             client.WatchfulAppInstanceError, client.get_project_id, summary
         )
 
-    def test_get_dataset_id(self):
-        summary = {
-            "datasets": ["abc123"],
-        }
-
-        dataset_id = client.get_dataset_id(summary)
-
-        self.assertEqual("abc123", dataset_id)
-
-    def test_get_dataset_id_not_open(self):
-        summary = {}
-
-        self.assertRaises(
-            client.WatchfulAppInstanceError, client.get_dataset_id, summary
-        )
-
-    def test_get_dataset_id_no_datasets(self):
-        summary = {
-            "datasets": [],
-        }
-
-        self.assertRaises(
-            client.WatchfulAppInstanceError, client.get_dataset_id, summary
-        )
-
     def test_get_watchful_home(self):
         summary = {"watchful_home": "/path/to/watchful/home"}
 
@@ -208,7 +183,7 @@ class TestClient(unittest.TestCase):
 
         summary = {"datasets": ["abc123"], "watchful_home": "/path/to/watchful"}
 
-        path = client.get_dataset_filepath(summary)
+        path = client.get_dataset_filepath(summary["datasets"][0], summary)
 
         self.assertEqual("/path/to/watchful/datasets/raw/abc123", path)
 
@@ -216,12 +191,17 @@ class TestClient(unittest.TestCase):
         summary = {"datasets": ["abc123"], "watchful_home": "/path/to/watchful"}
 
         self.assertRaises(
-            FileNotFoundError, client.get_dataset_filepath, summary
+            FileNotFoundError,
+            client.get_dataset_filepath,
+            summary["datasets"][0],
+            summary,
         )
 
     def test_get_datasets_filepath_not_local(self):
         summary = {"datasets": ["abc123"], "watchful_home": "/path/to/watchful"}
 
-        path = client.get_dataset_filepath(summary, is_local=False)
+        path = client.get_dataset_filepath(
+            summary["datasets"][0], summary, is_local=False
+        )
 
         self.assertEqual("", path)

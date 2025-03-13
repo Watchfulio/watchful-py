@@ -20,7 +20,6 @@ from .client import (
     create_project,
     title,
     get_project_id,
-    get_dataset_id,
     get_watchful_home,
     get_datasets_dir,
     get_dataset_filepath,
@@ -95,7 +94,7 @@ from .attributes import (
     atterize_values_in_cell,
     create_attribute_for_values,
     get_context,
-    get_dataset_id_dir_filepath,
+    get_dataset_dir_filepath,
 )
 from .enrich import main
 from .enricher import (
