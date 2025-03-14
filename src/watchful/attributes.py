@@ -1104,6 +1104,7 @@ def atterize_values_in_cell(
 
 
 def create_attribute_for_values(
+    dataset_id: str,
     attribute_name: str,
     values: List[re.Pattern],
 ) -> str:
@@ -1123,7 +1124,7 @@ def create_attribute_for_values(
     :rtype: str
     """
 
-    in_file, out_file, out_filename = get_context(attribute_name)
+    in_file, out_file, out_filename = get_context(dataset_id, attribute_name)
     enrich(
         in_file,
         out_file,
@@ -1133,14 +1134,18 @@ def create_attribute_for_values(
     return out_filename
 
 
-def get_context(attribute_filename: str) -> Tuple[str, str, str]:
+def get_context(
+    dataset_id: str, attribute_filename: str
+) -> Tuple[str, str, str]:
     """
-    This function takes in an attributes filename, finds the current dataset
-    file loaded in Watchful and returns the context needed to enrich that
+    This function takes in a dataset ID and attributes filename, finds the dataset
+    file loaded in Watchful, and returns the context needed to enrich that
     dataset. This context includes the filename of the file used by the
     attributes action and function:
     ``client.load_attributes(dataset_id, attribute_filename)``.
 
+    :param dataset_id: The dataset ID to get a context for.
+    :type dataset_id: str
     :param attribute_filename: The input attributes filename.
     :type attribute_filename: str
     :return: The dataset filepath, used attributes filepath and used attributes
@@ -1151,7 +1156,7 @@ def get_context(attribute_filename: str) -> Tuple[str, str, str]:
     summary = client.get()
     attrs_dir = os.path.join(summary["watchful_home"], "datasets", "attrs")
     os.makedirs(attrs_dir, exist_ok=True)
-    _, in_file = get_dataset_dir_filepath(summary)
+    _, in_file = get_dataset_dir_filepath(dataset_id, summary)
     in_filename = os.path.basename(in_file)
     out_file = os.path.join(
         attrs_dir, f"{in_filename}_{attribute_filename}.attrs"
@@ -1161,6 +1166,7 @@ def get_context(attribute_filename: str) -> Tuple[str, str, str]:
 
 
 def get_dataset_dir_filepath(
+    dataset_id: str,
     summary: Dict,
     in_file: Optional[str] = "",
     is_local: Optional[bool] = True,
@@ -1169,6 +1175,8 @@ def get_dataset_dir_filepath(
     This function returns the id, directory and filepath of the currently opened
     dataset.
 
+    :param dataset_id: The dataset ID corresponding to ``summary``.
+    :type dataset_id: str
     :param summary: The dictionary of the HTTP response from a connection
         request, defaults to None.
     :type summary: Dict
@@ -1190,6 +1198,8 @@ def get_dataset_dir_filepath(
             raise FileNotFoundError(f"File {in_file} does not exist.")
         dataset_filepath = in_file
     else:
-        dataset_filepath = client.get_dataset_filepath(summary, is_local)
+        dataset_filepath = client.get_dataset_filepath(
+            dataset_id, summary, is_local
+        )
 
     return datasets_dir, dataset_filepath
