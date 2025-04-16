@@ -400,21 +400,23 @@ def list_projects() -> List[Dict[str, Union[str, bool]]]:
     return json.loads(response.text)
 
 
-def open_project(id_: str) -> str:
+def open_project(id_: str, path: str) -> str:
     """
-    This function opens a project via its project id, which is the path to its
+    This function opens a project via its project id, and the path to its
     hints file.
 
     :param id_: The project id.
     :type id_: str
+    :param path: The project path.
+    :type path: str
     :return: The read HTTP response.
     :rtype: str
     """
 
     response = request(
         "POST",
-        "/projects",
-        data=json.dumps(id_),
+        f"/projects/{id_}/open",
+        data=json.dumps(path),
         headers={"Content-Type": "application/json"},
         timeout=API_TIMEOUT_SEC,
     )
@@ -439,10 +441,18 @@ def create_project(title_: Optional[str] = None) -> Union[str, Dict]:
     :rtype: Union[str, Optional[Dict]]
     """
 
-    ret = open_project("new")
+    response = request(
+        "POST",
+        "/projects",
+        headers={"Content-Type": "application/json"},
+        timeout=API_TIMEOUT_SEC,
+    )
+
+    ret = response.content.decode("utf-8")
 
     if title_ is not None and ret == '"OK"\n':
         return title(title_)
+
     return ret
 
 
