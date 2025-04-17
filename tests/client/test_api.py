@@ -73,7 +73,10 @@ class TestClient(unittest.TestCase):
 
     @responses.activate
     def test_open_project(self):
-        responses.add("POST", f"{self.URL_ROOT}/projects", body='"OK"')
+        project_id = "abc123"
+        responses.add(
+            "POST", f"{self.URL_ROOT}/projects/{project_id}/open", body='"OK"'
+        )
         responses.add(
             "POST",
             f"{self.URL_ROOT}/api",
@@ -93,7 +96,7 @@ class TestClient(unittest.TestCase):
             ),
         )
 
-        value = client.open_project("abc123")
+        value = client.open_project("abc123", "abc123")
 
         self.assertEqual('"OK"', value)
 
