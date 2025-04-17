@@ -74,7 +74,9 @@ class TestClient(unittest.TestCase):
     @responses.activate
     def test_open_project(self):
         project_id = "abc123"
-        responses.add("POST", f"{self.URL_ROOT}/projects/{project_id}/open", body='"OK"')
+        responses.add(
+            "POST", f"{self.URL_ROOT}/projects/{project_id}/open", body='"OK"'
+        )
         responses.add(
             "POST",
             f"{self.URL_ROOT}/api",
