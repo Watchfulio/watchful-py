@@ -93,7 +93,7 @@ class TestClient(unittest.TestCase):
             ),
         )
 
-        value = client.open_project("abc123")
+        value = client.open_project("abc123", "abc123")
 
         self.assertEqual('"OK"', value)
 
