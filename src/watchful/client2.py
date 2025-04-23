@@ -14,7 +14,7 @@ from watchful.__about__ import __version__
 from watchful import types
 
 
-@dataclass(frozen=True, kw_only=True)
+@dataclass(frozen=True)
 class Summary:
     """A summary of the current state of Watchful.
 
@@ -22,11 +22,6 @@ class Summary:
     with its values and settings, as well as application related
     values as well. The Summary object represents that state.
     """
-
-    project_id: str
-    title: str
-    datasets: typing.List[str]
-    watchful_home: str = field(default=os.path.expanduser("~/watchful"))
 
     auto_complete: typing.Any
     cand_seq_full: int
@@ -51,6 +46,7 @@ class Summary:
     notifications: typing.List[typing.Any]
     precision_candidate: typing.Dict[str, typing.Any]
     project_config: typing.Dict[str, typing.Any]
+    project_id: str
     published_title: typing.Optional[typing.Any]
     pull_actions: typing.List[typing.Any]
     push_actions: typing.List[typing.Any]
@@ -70,7 +66,10 @@ class Summary:
     status: str
     suggestion: typing.Optional[typing.Any]
     suggestions: typing.Dict[str, typing.Any]
+    title: str
     unlabeled_candidate: typing.List[typing.Any]
+    datasets: typing.List[str]
+    watchful_home: str = field(default=os.path.expanduser("~/watchful"))
 
     @property
     def datasets_dir(self) -> str:
