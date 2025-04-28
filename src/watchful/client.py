@@ -21,7 +21,6 @@ from typing import (
     Literal,
     Optional,
     Union,
-    Mapping,
 )
 from urllib.parse import urlencode
 from uuid import uuid4
@@ -94,11 +93,7 @@ def await_port_opening(port: int, timeout_sec: int = 10) -> None:
 
 def spawn_cmd(
     cmd: str,
-    env: Union[
-        Mapping[bytes, Union[str, bytes, os.PathLike[str], os.PathLike[bytes]]],
-        Mapping[str, Union[str, bytes, os.PathLike[str], os.PathLike[bytes]]],
-        None,
-    ] = None,
+    env: Optional[Dict[str, str]] = None,
 ) -> int:
     """
     This function spawns a command and returns the PID of the spawned process.
@@ -106,7 +101,7 @@ def spawn_cmd(
     :param cmd: The command.
     :type cmd: str
     :param env: The environment, defaults to None.
-    :type env: str, optional
+    :type env: Optional[Dict[str, str]], optional
     :return: The PID of the spawned process.
     :rtype: int
     """
@@ -1129,9 +1124,7 @@ def export_project() -> requests.models.Response:
 
 def is_utf8(
     csv_bytes: Optional[bytes] = None,
-    filepath: Optional[
-        Union[int, Union[str, bytes, os.PathLike[str], os.PathLike[bytes]]]
-    ] = None,
+    filepath: Optional[str] = None,
     threshold: float = 0.5,
 ) -> bool:
     """

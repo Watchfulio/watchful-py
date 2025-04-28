@@ -12,7 +12,7 @@ import pprint
 import re
 from heapq import merge
 from multiprocessing import Pool
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Tuple, Any
 import psutil
 import warnings
 from watchful import client, enricher
@@ -25,23 +25,23 @@ pprint = pprint.PrettyPrinter(indent=4).pprint
 
 # Constants for use in the data enrichment. Generally, they should not be edited
 # directly.
-IS_MULTIPROC = False
-MULTIPROC_CHUNKSIZE = None
-ENRICHMENT_ARGS = None
-ATTR_WRITER = None
+IS_MULTIPROC: bool = False
+MULTIPROC_CHUNKSIZE: Optional[int] = None
+ENRICHMENT_ARGS: Optional[Tuple[Any, ...]] = None
+ATTR_WRITER: Optional[Callable] = None
 
 
 # Constants for encoding spans into compact strings. Do not edit them.
-BASE = 64
-COMPRESSED_LEN = 8
+BASE: int = 64
+COMPRESSED_LEN: int = 8
 
 # Chars: "0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmno"
-NUMERALS = dict(
+NUMERALS: Dict[int, str] = dict(
     map(lambda ic: (ic[0], chr(ic[1])), enumerate(range(48, 48 + BASE)))
 )
 
 # Chars: "#$%&'()*"
-COMPRESSED = dict(
+COMPRESSED: Dict[int, str] = dict(
     map(
         lambda ic: (ic[0], chr(ic[1])),
         enumerate(range(35, 35 + COMPRESSED_LEN)),
@@ -600,7 +600,7 @@ def load_flair() -> Tuple:  # pragma: no cover
 
 @enricher.set_enrich_fn_order()
 def enrich_row(
-    row: Dict[Optional[str], Optional[str]]
+    row: Dict[Optional[str], Optional[str]],
 ) -> List[enricher.EnrichedCell]:
     """
     This function enriches one row. It takes named cells of an input row and
@@ -766,9 +766,10 @@ def enrich_by_row(
         for n_rows, _ in enumerate(in_reader, 1):
             pass
 
-    with open(in_file, encoding="utf-8", newline="") as infile, open(
-        out_file, "w", encoding="utf-8"
-    ) as outfile:
+    with (
+        open(in_file, encoding="utf-8", newline="") as infile,
+        open(out_file, "w", encoding="utf-8") as outfile,
+    ):
         in_reader = csv.DictReader(infile)
 
         global ATTR_WRITER
