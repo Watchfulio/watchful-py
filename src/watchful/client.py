@@ -593,7 +593,7 @@ def records(csv_: str) -> Optional[Dict]:
 
 def set_column_flag(
     columns: Optional[List[str]] = None,
-    flag: Literal["inferenceable", "enrichable"] = "inferenceable",
+    flag: Literal["enrichable"] = "enrichable",
     pos_sense: bool = True,
 ) -> Optional[Dict]:
     """
@@ -602,8 +602,7 @@ def set_column_flag(
     ``True`` and all other columns will be set to ``False``. A helper to
     indicate all available columns as given is to omit ``columns``.
 
-    :param flag: The flag to be set; "inferenceable" and "enrichable" are the
-        only supported flags.
+    :param flag: The flag to be set; "enrichable" is the only supported flag.
     :type flag: str, optional
     :param columns: A list of column names specifying whether the flag should
         be set.
@@ -645,7 +644,7 @@ def set_column_flag(
 
 def ignore_column_flag(
     columns: Optional[List[str]] = None,
-    flag: Literal["inferenceable", "enrichable"] = "inferenceable",
+    flag: Literal["enrichable"] = "enrichable",
 ) -> Optional[Dict]:
     """
     This function sets a flag for each of the columns of the dataset in the
@@ -653,8 +652,7 @@ def ignore_column_flag(
     other columns will be set to ``True``. A helper to indicate all available
     columns as given is to omit ``columns``.
 
-    :param flag: The flag to be set; "inferenceable" and "enrichable" are the
-        only supported flags.
+    :param flag: The flag to be set; "enrichable" is the only supported flag.
     :type flag: str, optional
     :param columns: A list of column names specifying whether the flag should
         be set to ``False``.
