@@ -197,12 +197,12 @@ class Client:
     def flag_columns(
         self,
         columns: typing.List[bool],
-        flag: typing.Literal["inferenceable", "enrichable"],
+        flag: typing.Literal["enrichable"],
     ) -> Summary:
         """Toggle flags for columns."""
-        flags = ["inferenceable", "enrichable"]
+        flags = ["enrichable"]
         if flag not in flags:
-            raise ValueError("Flag must be 'inferenceable' or 'enrichable'")
+            raise ValueError("Flag must be 'enrichable'")
 
         self._session.post(
             urljoin(self._root_url, "api"),
