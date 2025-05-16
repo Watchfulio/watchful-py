@@ -209,7 +209,7 @@ class TestClient(unittest.TestCase):
                 "cand_seq_prefix": "",
                 "candidates": [],
                 "classes": "",
-                "column_flags": {"inferenceable": [True, False, False]},
+                "column_flags": {"enrichable": [True, False, False]},
                 "disagreements": "",
                 "enrichment_tasks": "",
                 "error_msg": None,
@@ -252,9 +252,9 @@ class TestClient(unittest.TestCase):
 
         flags = [True, False, False]
         client = Client(URL_ROOT)
-        summary = client.flag_columns(flags, "inferenceable")
+        summary = client.flag_columns(flags, "enrichable")
 
-        self.assertEqual({"inferenceable": flags}, summary.column_flags)
+        self.assertEqual({"enrichable": flags}, summary.column_flags)
 
     @responses.activate
     def test_flag_enrich_columns(self):
@@ -341,7 +341,7 @@ class TestClient(unittest.TestCase):
                 "cand_seq_prefix": "",
                 "candidates": [],
                 "classes": "",
-                "column_flags": {"inferenceable": [True, False, False]},
+                "column_flags": {"enrichable": [True, False, False]},
                 "disagreements": "",
                 "enrichment_tasks": "",
                 "error_msg": None,
@@ -399,7 +399,7 @@ class TestClient(unittest.TestCase):
                 "cand_seq_prefix": "",
                 "candidates": [],
                 "classes": "",
-                "column_flags": {"inferenceable": [True, False, False]},
+                "column_flags": {"enrichable": [True, False, False]},
                 "disagreements": "",
                 "enrichment_tasks": "",
                 "error_msg": None,
@@ -485,7 +485,7 @@ class TestClient(unittest.TestCase):
                         "thresholds": [50, 50],
                     }
                 },
-                "column_flags": {"inferenceable": [True, False, False]},
+                "column_flags": {"enrichable": [True, False, False]},
                 "disagreements": "",
                 "enrichment_tasks": "",
                 "error_msg": None,
@@ -704,7 +704,7 @@ class TestClient(unittest.TestCase):
                         "thresholds": [50, 50],
                     }
                 },
-                "column_flags": {"inferenceable": [True, False, False]},
+                "column_flags": {"enrichable": [True, False, False]},
                 "disagreements": "",
                 "enrichment_tasks": "",
                 "error_msg": None,
@@ -794,7 +794,7 @@ class TestClient(unittest.TestCase):
                         "thresholds": [50, 50],
                     }
                 },
-                "column_flags": {"inferenceable": [True, False, False]},
+                "column_flags": {"enrichable": [True, False, False]},
                 "disagreements": "",
                 "enrichment_tasks": "",
                 "error_msg": None,
@@ -886,7 +886,7 @@ class TestClient(unittest.TestCase):
                         "thresholds": [50, 50],
                     }
                 },
-                "column_flags": {"inferenceable": [True, False, False]},
+                "column_flags": {"enrichable": [True, False, False]},
                 "disagreements": "",
                 "enrichment_tasks": "",
                 "error_msg": None,
@@ -976,7 +976,7 @@ class TestClient(unittest.TestCase):
                         "thresholds": [50, 50],
                     }
                 },
-                "column_flags": {"inferenceable": [True, False, False]},
+                "column_flags": {"enrichable": [True, False, False]},
                 "disagreements": "",
                 "enrichment_tasks": "",
                 "error_msg": None,
