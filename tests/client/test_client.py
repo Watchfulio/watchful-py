@@ -569,14 +569,14 @@ class TestClient(unittest.TestCase):
     def test_login(self):
         """A user can log in to a remote hub."""
         responses.add(
-            responses.POST, urljoin(URL_ROOT, "remote"), body="myToken"
+            responses.POST, urljoin(URL_ROOT, "remote/login"), body="myToken"
         )
 
         client = Client(URL_ROOT)
         data = client.login("myUserName", "NotAVerySecurePassword")
 
         self.assertTrue(
-            responses.assert_call_count(urljoin(URL_ROOT, "remote"), 1)
+            responses.assert_call_count(urljoin(URL_ROOT, "remote/login"), 1)
         )
         self.assertEqual(data, "myToken")
 
