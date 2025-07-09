@@ -3,7 +3,6 @@ This script provides the functions required for interacting directly with
 Watchful client application.
 """
 
-import base64
 import csv
 import io
 import json

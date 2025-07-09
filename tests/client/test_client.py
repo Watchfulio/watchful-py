@@ -576,7 +576,7 @@ class TestClient(unittest.TestCase):
         data = client.login("myUserName", "NotAVerySecurePassword")
 
         self.assertTrue(
-            responses.assert_call_count(urljoin(URL_ROOT, "remote"), 1)
+            responses.assert_call_count(urljoin(URL_ROOT, "remote/login"), 1)
         )
         self.assertEqual(data, "myToken")
 

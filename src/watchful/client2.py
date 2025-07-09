@@ -424,7 +424,7 @@ class Client:
         # Remote functions return a summary. In this case, we'll ignore the
         # summary, as it's mostly irrelevant for what we need.
         response = self._session.post(
-            urljoin(self._root_url, "remote"),
+            urljoin(self._root_url, "remote/login"),
             json={"verb": "login"},
             headers={"Authorization": f"Basic {credentials}"},
             timeout=self.timeout,
