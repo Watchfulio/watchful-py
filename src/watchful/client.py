@@ -1456,14 +1456,11 @@ def login(email: str, password: str) -> Optional[Dict]:
     """
 
     headers = {"Content-Type": "application/json"}
-    credentials = base64.b64encode(str.encode(f"{email}:{password}")).decode(
-        "utf-8"
-    )
-    headers.update({"Authorization": f"Basic {credentials}"})
+    login_request = {"email": email, "password": password}
     response = request(
         "POST",
-        "/remote",
-        data=json.dumps({"verb": "login"}),
+        "/remote/login",
+        data=json.dumps(login_request),
         headers=headers,
         timeout=API_TIMEOUT_SEC,
     )
